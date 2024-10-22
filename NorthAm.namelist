@@ -1,0 +1,5 @@
+&joboptions
+  climatefile     = '/Users/jkaplan/nosync/inputdata_northam/NAclimate.nc'
+  soilfile        = '/Users/jkaplan/nosync/inputdata_northam/NAsoils.nc'
+  gridinfo%isproj = .true.
+/
