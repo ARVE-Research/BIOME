@@ -56,3 +56,7 @@ m4/lt~obsolete.m4
 # can automatically generate from config.status script
 # (which is called by configure script))
 Makefile
+
+# Fortran modules and object files
+*.mod
+*.o
