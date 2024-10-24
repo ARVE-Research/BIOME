@@ -24,10 +24,12 @@ type(coordstype),  allocatable, dimension(:,:)   :: coords
 type(terraintype), allocatable, dimension(:,:)   :: terrain
 type(climatetype), allocatable, dimension(:,:,:) :: climate
 type(soiltype),    allocatable, dimension(:,:,:) :: soil
-type(climatetype), allocatable, dimension(:)     :: daily
+type(climatetype), allocatable, dimension(:,:)   :: daily
 
 integer :: x
 integer :: y
+integer :: m
+integer :: i
 
 integer :: cntx
 integer :: cnty
@@ -35,6 +37,9 @@ integer :: cnty
 integer :: ofid
 
 integer, dimension(nm) :: ndm
+
+integer :: valid
+integer :: nd
 
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile
 
@@ -56,7 +61,7 @@ call parsecoords(coordstring,gridinfo)
 
 call calcpixels(climatefile,gridinfo)
 
-write(0,*)gridinfo
+! write(0,*)gridinfo
 
 cntx = gridinfo%cntx
 cnty = gridinfo%cnty
@@ -87,33 +92,42 @@ call getarg(3,outfile)
 call genoutputfile(jobfile,outfile,gridinfo,ofid)
 
 ! ---------------------------------
-! allocate daily vectors for meteorological variables
+! check for valid pixels
 
-allocate(daily(nd_365))
+valid = count(soil(:,:,1)%whc > 0.)
 
+write(0,'(a,i0,a)')' there are ',valid,' valid pixels'
+
+nd  = nd_365
 ndm = int(present_mon_noleap)
 
-! grid loop
+! at this point should make a quick check for total memory requirement and take appropriate action if the amount is too large
+
+allocate(daily(valid,nd))
+
+write(0,'(a,i0,a)')' daily smoothed metvars size: ',sizeof(daily) / 1048576,' MB'
+
+i = 1
 
 do y = 1,cnty
   do x = 1,cntx
   
-    if (soil(x,y,1)%whc < 0.) cycle
-
-    ! interpolate climate to pseudo-daily using means-preserving algorithm
-  
-    ! call newspline(climate(x,y,:)%tmp,ndm,daily%tmp,prec=1)
-  
-  
-    ! use weather generator to generate daily weather
+    if (soil(x,y,1)%whc <= 0.) cycle
     
-    ! ---------------------------------
-    ! calculate daily surface insolation and potential evapotranspiration (PET)
+    call newspline(climate(x,y,:)%tmp,ndm,[climate(x,y,12)%tmp,climate(x,y,1)%tmp],daily(i,:)%tmp)
+    call newspline(climate(x,y,:)%dtr,ndm,[climate(x,y,12)%dtr,climate(x,y,1)%dtr],daily(i,:)%dtr)
+    call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,12)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
+    call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,12)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
+    
+    i = i + 1
 
   end do
 end do
 
-! end grid loop
+! daily loop
+
+  ! grid loop
+
 
 ! ---------------------------------
 ! write model output
