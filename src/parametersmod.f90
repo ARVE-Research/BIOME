@@ -17,4 +17,8 @@ integer, parameter :: stderr = error_unit
 
 real(sp), parameter :: rmissing = -9999.
 
+real(sp), parameter :: hsp = huge(1._sp)    ! largest positive 4-byte real
+
+real(sp), parameter :: Tfreeze = 273.15 ! freezing temperature of freshwater (K)
+
 end module parametersmod

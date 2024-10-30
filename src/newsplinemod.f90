@@ -34,10 +34,10 @@ real(sp), dimension(:), intent(in)  :: monthdata  ! Array of (monthly) interval 
 integer,  dimension(:), intent(in)  :: nk         ! Array of number of small time-steps for each interval (can be variable)
 real(sp), dimension(2), intent(in)  :: bcond      ! Boundary condition array, bcond(1) = bcond of first interval and bcond(2) = bcond of last interval
 real(sp), dimension(:), intent(out) :: daydata    ! Array of interpolated values (dimension must be equal to sum of nk)
-real(sp), optional,     intent(in)  :: alim       ! OPTIONAL :: Absolute limit for bounded interpolation
-real(sp), optional,     intent(in)  :: llim       ! OPTIONAL :: Minimum limit for bounded interpolation
-real(sp), optional,     intent(in)  :: ulim       ! OPTIONAL :: Maximum limit for bounded interpolation
-real(sp), optional,     intent(in)  :: plim       ! OPTIONAL :: Percentage limit for bounded interpolation
+real(sp), optional,     intent(in)  :: alim       ! OPTIONAL : Absolute limit for bounded interpolation
+real(sp), optional,     intent(in)  :: llim       ! OPTIONAL : Minimum limit for bounded interpolation
+real(sp), optional,     intent(in)  :: ulim       ! OPTIONAL : Maximum limit for bounded interpolation
+real(sp), optional,     intent(in)  :: plim       ! OPTIONAL : Percentage limit for bounded interpolation
 
 ! Local variables for wall control points
 
@@ -90,7 +90,7 @@ wcp(len+1) = (monthdata(len) + bcond(2)) / 2.
 
 do i = 2, len
 
-  wcp(i) = (monthdata(i-1) + monthdata(i)) / 2
+  wcp(i) = (monthdata(i - 1) + monthdata(i)) / 2
 
 end do
 
@@ -126,12 +126,12 @@ mat = 0.
 mat(1,1) = 0.5 * G_10 + G_01 + G_00 - 0.5 * G_11
 mat(1,2) = 0.5 * G_11
 
-mat(len,len-1) = -0.5 * G_10
+mat(len,len - 1) = -0.5 * G_10
 mat(len,len)   = 0.5 * G_10 + G_01 + G_00 - 0.5 * G_11
 
 
 n = 1
-do i = 2, (len-1)
+do i = 2, (len - 1)
 
   mat(i,n)   = -0.5 * G_10
 
@@ -158,7 +158,7 @@ solution(len) = 2 * monthdata(len) - &
 solution(len) = solution(len) - 0.5 * G_11 * bcond(2)
 
 
-do i = 2, (len-1)
+do i = 2, (len - 1)
 
   solution(i) = 2 * monthdata(i) - &
                 (G_00 - 0.5 * G_10 - 0.5 * G_11) * wcp(i) - &
@@ -201,11 +201,11 @@ len_cont = size(all_cont)
 allocate(m_cont(len_cont))
 
 m_cont(1)        = all_cont(2) - bcond(1)
-m_cont(len_cont) = bcond(2) - all_cont(len_cont-1)
+m_cont(len_cont) = bcond(2) - all_cont(len_cont - 1)
 
 do i = 2, len_cont-1
 
-  m_cont(i) = all_cont(i+1) - all_cont(i-1)
+  m_cont(i) = all_cont(i+1) - all_cont(i - 1)
 
 end do
 
@@ -284,7 +284,7 @@ do i = 1, len ! Outer loop start, for all monthly intervals N
 
     u = 2. / nk(i)
 
-    do j = 1, ((nk(i)-1) / 2)
+    do j = 1, ((nk(i) - 1) / 2)
 
       H_00 = 1. + (u**2) * (2*u - 3)
       H_01 = (u**2) * (3 - 2*u)
@@ -314,7 +314,6 @@ if (present(ulim)) call ulim_adjust(ulim,monthdata,nk,bcond,all_cont,daydata)
 if (present(alim)) call alim_adjust(alim,monthdata,nk,bcond,all_cont,daydata)
 if (present(plim)) call plim_adjust(plim,monthdata,nk,bcond,all_cont,daydata)
 
-
 end subroutine newspline
 
 ! ------------------------------------------------------------------------------------------------------------------
@@ -333,7 +332,7 @@ logical,  allocatable, dimension(:) :: osc_check        ! TRUE if interval requi
 real(sp), allocatable, dimension(:) :: c2               ! Array to store the amount of adjustment required
 real(sp), allocatable, dimension(:) :: c_mon            ! Array to store current month (or interval) of values for bounded adjustment (dim = day in month)
 
-real(sp) :: perc
+! real(sp) :: perc ! this was declared but is not initialized in this routine
 
 real(sp) :: int_n
 real(sp) :: int_nm1
@@ -344,8 +343,8 @@ integer :: len
 integer :: i
 integer :: j
 integer :: k
-integer :: srt
-integer :: end
+integer :: srtloc
+integer :: endloc
 
 ! -----
 
@@ -372,10 +371,10 @@ do i = 1, len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -425,7 +424,9 @@ do i = 1, len
 
   else if (d_orig(i) == 0 .and. int_n < 0) then
 
-    if (sip12 < (1.0+perc) * int_n .OR. sip12 > (1.0-perc) * int_n) then
+    !if (sip12 < (1. + perc) * int_n .or. sip12 > (1. - perc) * int_n) then
+    if (sip12 < int_n + alim .OR. sip12 > int_n - alim) then
+
 
       osc_check(i) = .TRUE.
 
@@ -447,10 +448,10 @@ do i = 1, len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -506,21 +507,21 @@ do i = 1, len
       int_nm1 = bcond(1)
       int_np1 = monthdata(i+1)
     else if (i == len) then       ! If last interval, apply bcond(2)
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = bcond(2)
     else
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = monthdata(i+1)
     end if
 
     ! ---
 
     if (i == 1) then
-      srt = 1
-      end = srt + nk(1) - 1
+      srtloc = 1
+      endloc = srtloc + nk(1) - 1
     else
-      srt = sum(nk(1:(i-1))) + 1
-      end = srt + nk(i) - 1
+      srtloc = sum(nk(1:(i - 1))) + 1
+      endloc = srtloc + nk(i) - 1
     end if
 
     ! ---
@@ -529,17 +530,17 @@ do i = 1, len
     allocate(c_mon(nk(i)+2))
 
     if (i == 1) then
-      c_mon(1)         = all_cont(1)
-      c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(1)           = all_cont(1)
+      c_mon(2:nk(i) + 1) = int_n + c2(i)
+      c_mon(nk(i) + 2)   = daydata(endloc + 1)
     else if (i == len) then
-      c_mon(1)         = daydata(srt-1)
-      c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = all_cont(2*len+1)
+      c_mon(1)           = daydata(srtloc - 1)
+      c_mon(2:nk(i) + 1) = int_n + c2(i)
+      c_mon(nk(i) + 2)   = all_cont(2 * len + 1)
     else
-      c_mon(1)         = daydata(srt-1)
-      c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(1)           = daydata(srtloc - 1)
+      c_mon(2:nk(i) + 1) = int_n + c2(i)
+      c_mon(nk(i) + 2)   = daydata(endloc + 1)
     end if
 
     ! ---
@@ -554,7 +555,7 @@ do i = 1, len
 
       do k = 2, nk(i)+1
 
-        c_mon(k) = (c_mon(k-1) + c_mon(k) + c_mon(k+1)) / 3.
+        c_mon(k) = (c_mon(k - 1) + c_mon(k) + c_mon(k+1)) / 3.
 
       end do
 
@@ -562,7 +563,7 @@ do i = 1, len
 
     ! ---
 
-    daydata(srt:end) = c_mon(2:nk(i)+1)
+    daydata(srtloc:endloc) = c_mon(2:nk(i)+1)
 
     deallocate(c_mon)
 
@@ -602,8 +603,8 @@ integer :: len
 integer :: i
 integer :: j
 integer :: k
-integer :: srt
-integer :: end
+integer :: srtloc
+integer :: endloc
 
 ! -----
 
@@ -630,10 +631,10 @@ do i = 1, len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -672,14 +673,14 @@ do i = 1, len
 
   ! Assign intervals values to variables
 
-  int_n = monthdata(i)        ! Current interval
-  sip12 = all_cont(2*i)       ! Position of interval mid-control point (i.e. si+1/2)
+  int_n = monthdata(i)     ! Current interval
+  sip12 = all_cont(2 * i)  ! Position of interval mid-control point (i.e. si+1/2)
 
   ! ---
 
   if (d_orig(i) == 0 .and. monthdata(i) > 0) then
 
-    if (sip12 > (1.0+perc) * int_n .OR. sip12 < (1.0-perc) * int_n) then
+    if (sip12 > (1. + perc) * int_n .OR. sip12 < (1. - perc) * int_n) then
 
       osc_check(i) = .TRUE.
 
@@ -687,7 +688,7 @@ do i = 1, len
 
   else if (d_orig(i) == 0 .and. int_n < 0) then
 
-    if (sip12 < (1.0+perc) * int_n .OR. sip12 > (1.0-perc) * int_n) then
+    if (sip12 < (1. + perc) * int_n .OR. sip12 > (1. - perc) * int_n) then
 
       osc_check(i) = .TRUE.
 
@@ -711,10 +712,10 @@ do i = 1, len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -770,21 +771,21 @@ do i = 1, len
       int_nm1 = bcond(1)
       int_np1 = monthdata(i+1)
     else if (i == len) then       ! If last interval, apply bcond(2)
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = bcond(2)
     else
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = monthdata(i+1)
     end if
 
     ! ---
 
     if (i == 1) then
-      srt = 1
-      end = srt + nk(1) - 1
+      srtloc = 1
+      endloc = srtloc + nk(1) - 1
     else
-      srt = sum(nk(1:(i-1))) + 1
-      end = srt + nk(i) - 1
+      srtloc = sum(nk(1:(i - 1))) + 1
+      endloc = srtloc + nk(i) - 1
     end if
 
     ! ---
@@ -794,15 +795,15 @@ do i = 1, len
     if (i == 1) then
       c_mon(1)         = all_cont(1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     else if (i == len) then
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
       c_mon(nk(i)+2)   = all_cont(2*len+1)
     else
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     end if
 
     ! ---
@@ -818,7 +819,7 @@ do i = 1, len
 
       do k = 2, nk(i)+1
 
-        c_mon(k) = (c_mon(k-1) + c_mon(k) + c_mon(k+1)) / 3.
+        c_mon(k) = (c_mon(k - 1) + c_mon(k) + c_mon(k+1)) / 3.
 
       end do
 
@@ -826,7 +827,7 @@ do i = 1, len
 
     ! ---
 
-    daydata(srt:end) = c_mon(2:nk(i)+1)
+    daydata(srtloc:endloc) = c_mon(2:nk(i)+1)
 
     deallocate(c_mon)
 
@@ -861,8 +862,8 @@ integer :: len
 integer :: i
 integer :: j
 integer :: k
-integer :: srt
-integer :: end
+integer :: srtloc
+integer :: endloc
 
 ! -----
 
@@ -889,10 +890,10 @@ do i = 1,len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -967,21 +968,21 @@ do i = 1, len
       int_nm1 = bcond(1)
       int_np1 = monthdata(i+1)
     else if (i == len) then       ! If last interval, apply bcond(2)
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = bcond(2)
     else
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = monthdata(i+1)
     end if
 
     ! ---
 
     if (i == 1) then
-      srt = 1
-      end = srt + nk(1) - 1
+      srtloc = 1
+      endloc = srtloc + nk(1) - 1
     else
-      srt = sum(nk(1:(i-1))) + 1
-      end = srt + nk(i) - 1
+      srtloc = sum(nk(1:(i - 1))) + 1
+      endloc = srtloc + nk(i) - 1
     end if
 
     ! ---
@@ -992,15 +993,15 @@ do i = 1, len
     if (i == 1) then
       c_mon(1)         = all_cont(1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     else if (i == len) then
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
       c_mon(nk(i)+2)   = all_cont(2*len+1)
     else
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     end if
 
     ! ---
@@ -1015,7 +1016,7 @@ do i = 1, len
 
       do k = 2, nk(i)+1
 
-        c_mon(k) = (c_mon(k-1) + c_mon(k) + c_mon(k+1)) / 3.
+        c_mon(k) = (c_mon(k - 1) + c_mon(k) + c_mon(k+1)) / 3.
 
       end do
 
@@ -1023,7 +1024,7 @@ do i = 1, len
 
     ! ---
 
-    daydata(srt:end) = c_mon(2:nk(i)+1)
+    daydata(srtloc:endloc) = c_mon(2:nk(i)+1)
 
     deallocate(c_mon)
 
@@ -1058,8 +1059,8 @@ integer :: len
 integer :: i
 integer :: j
 integer :: k
-integer :: srt
-integer :: end
+integer :: srtloc
+integer :: endloc
 
 ! -----
 
@@ -1087,10 +1088,10 @@ do i = 1, len
     int_nm1 = bcond(1)
     int_np1 = monthdata(i+1)
   else if (i == len) then       ! If last interval, apply bcond(2)
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = bcond(2)
   else
-    int_nm1 = monthdata(i-1)
+    int_nm1 = monthdata(i - 1)
     int_np1 = monthdata(i+1)
   end if
 
@@ -1164,21 +1165,21 @@ do i = 1, len
       int_nm1 = bcond(1)
       int_np1 = monthdata(i+1)
     else if (i == len) then       ! If last interval, apply bcond(2)
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = bcond(2)
     else
-      int_nm1 = monthdata(i-1)
+      int_nm1 = monthdata(i - 1)
       int_np1 = monthdata(i+1)
     end if
 
     ! ---
 
     if (i == 1) then
-      srt = 1
-      end = srt + nk(1) - 1
+      srtloc = 1
+      endloc = srtloc + nk(1) - 1
     else
-      srt = sum(nk(1:(i-1))) + 1
-      end = srt + nk(i) - 1
+      srtloc = sum(nk(1:(i - 1))) + 1
+      endloc = srtloc + nk(i) - 1
     end if
 
     ! ---
@@ -1189,15 +1190,15 @@ do i = 1, len
     if (i == 1) then
       c_mon(1)         = all_cont(1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     else if (i == len) then
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
       c_mon(nk(i)+2)   = all_cont(2*len+1)
     else
-      c_mon(1)         = daydata(srt-1)
+      c_mon(1)         = daydata(srtloc - 1)
       c_mon(2:nk(i)+1) = int_n + c2(i)
-      c_mon(nk(i)+2)   = daydata(end+1)
+      c_mon(nk(i)+2)   = daydata(endloc + 1)
     end if
 
     ! ---
@@ -1213,7 +1214,7 @@ do i = 1, len
 
       do k = 2, nk(i)+1
 
-        c_mon(k) = (c_mon(k-1) + c_mon(k) + c_mon(k+1)) / 3.
+        c_mon(k) = (c_mon(k - 1) + c_mon(k) + c_mon(k+1)) / 3.
 
       end do
 
@@ -1221,7 +1222,7 @@ do i = 1, len
 
     ! ---
 
-    daydata(srt:end) = c_mon(2:nk(i)+1)
+    daydata(srtloc:endloc) = c_mon(2:nk(i)+1)
 
     deallocate(c_mon)
 

@@ -12,7 +12,6 @@ module randomdistmod
 !   Burkardt for the gamma and normal distribution functions
 
 use parametersmod, only : sp,dp,i4
-use statsmod,      only : gamma_pdf,gamma_cdf
 
 implicit none
 

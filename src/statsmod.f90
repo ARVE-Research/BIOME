@@ -16,8 +16,6 @@ module statsmod
 !   (hopefully faster) Fortran 2008 intrinsics gamma and log_gamma.
 !   Testing change calculations to single precision since that is all we need really.
 
-use parametersmod, only : i4,dp
-
 implicit none
 
 public :: normal_cdf_inv        ! inverse of the normal CDF
@@ -31,11 +29,16 @@ private :: qchisq_appr          ! chi-square approximation, used by gamma_cdf_in
 private :: gamma_inc            ! incomplete Gamma function, used by gamma_cdf
 private :: normal_01_cdf        ! evaluate the Normal 01 CDF, used by gamma_inc
 
+interface gamma_cdf
+  module procedure gamma_cdf_sp
+  module procedure gamma_cdf_dp
+end interface gamma_cdf
+
 contains
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 ! public routines
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 subroutine normal_cdf_inv(cdf,a,b,x)
 
@@ -50,11 +53,13 @@ subroutine normal_cdf_inv(cdf,a,b,x)
 !    - John Burkardt
 !    - Extracted by Philipp Sommer
 
+use parametersmod, only : dp
+
 implicit none
 
 ! arguments
 
-real(dp), intent(in)  :: cdf ! the value of the CDF. 0. <= CDF <= 1.0.
+real(dp), intent(in)  :: cdf ! the value of the CDF. 0. <= CDF <= 1.
 real(dp), intent(in)  :: a   ! the mean of the pdf
 real(dp), intent(in)  :: b   ! the standard deviation of the pdf
 real(dp), intent(out) :: x   ! the corresponding argument
@@ -63,7 +68,7 @@ real(dp), intent(out) :: x   ! the corresponding argument
 
 real(dp) :: x2
 
-!----
+! ----
 
 if (cdf < 0._dp .or. 1._dp < cdf) then
   write (0,'(a)')''
@@ -78,7 +83,7 @@ x = a + b * x2
 
 end subroutine normal_cdf_inv
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 subroutine gamma_pdf(x,a,b,c,pdf)
 
@@ -101,14 +106,16 @@ subroutine gamma_pdf(x,a,b,c,pdf)
 !    - John Burkardt
 !    - Extracted by Philipp Sommer
 
+use parametersmod, only : sp,dp
+
 implicit none
 
 ! arguments
 
-real(dp), intent(in)  :: x    ! the argument of the PDF. A <= X
-real(dp), intent(in)  :: a    ! the location of the peak;  A is often chosen to be 0.0.
-real(dp), intent(in)  :: b    ! the "scale" parameter; 0. < B, and is often 1.0.
-real(dp), intent(in)  :: c    ! the "shape" parameter; 0. < C, and is often 1.0.
+real(sp), intent(in)  :: x    ! the argument of the PDF. A <= X
+real(sp), intent(in)  :: a    ! the location of the peak;  A is often chosen to be 0.
+real(sp), intent(in)  :: b    ! the "scale" parameter; 0. < B, and is often 1.
+real(sp), intent(in)  :: c    ! the "shape" parameter; 0. < C, and is often 1.
 real(dp), intent(out) :: pdf  ! the returned value of the PDF
 
 ! local variable
@@ -116,7 +123,7 @@ real(dp), intent(out) :: pdf  ! the returned value of the PDF
 real(dp) :: y
 real(dp) :: c1
 
-!---------------------------
+! ---------------------------
 
 c1 = c
 
@@ -134,9 +141,9 @@ end if
 
 end subroutine gamma_pdf
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
-subroutine gamma_cdf(x,a,b,c,cdf)
+subroutine gamma_cdf_sp(x,a,b,c,cdf)
 
 ! Evaluate the Gamma CDF.
 
@@ -149,14 +156,16 @@ subroutine gamma_cdf(x,a,b,c,cdf)
 !   John Burkardt
 !   Extracted by Philipp Sommer
 
+use parametersmod, only : sp,dp
+
 implicit none
 
 ! arguments
 
-real(dp), intent(in)  :: x   ! the input value for which to compute the CDF
-real(dp), intent(in)  :: a   ! the location (< `x`) of the gamma distribution (usually 0)
-real(dp), intent(in)  :: b   ! the shape (> 0.0) of the distribution
-real(dp), intent(in)  :: c   ! the scale (>0.0) of the distribution
+real(sp), intent(in)  :: x   ! the input value for which to compute the CDF
+real(sp), intent(in)  :: a   ! the location (< `x`) of the gamma distribution (usually 0)
+real(sp), intent(in)  :: b   ! the shape (> 0.) of the distribution
+real(sp), intent(in)  :: c   ! the scale (>0.) of the distribution
 real(dp), intent(out) :: cdf ! the returned value of the CDF
 
 ! local variables
@@ -164,16 +173,57 @@ real(dp), intent(out) :: cdf ! the returned value of the CDF
 real(dp) :: p2
 real(dp) :: x2
 
-!---------------
+! ---------------
 
 x2 = (x - a) / b
 p2 = c
 
 cdf = gamma_inc(p2,x2)
 
-end subroutine gamma_cdf
+end subroutine gamma_cdf_sp
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
+
+subroutine gamma_cdf_dp(x,a,b,c,cdf)
+
+! Evaluate the Gamma CDF.
+
+! Licensing:
+!   This code is distributed under the GNU LGPL license.
+! Modified:
+!   02 January 2000
+!   Extracted: June, 2016
+! Author:
+!   John Burkardt
+!   Extracted by Philipp Sommer
+
+use parametersmod, only : dp
+
+implicit none
+
+! arguments
+
+real(dp), intent(in)  :: x   ! the input value for which to compute the CDF
+real(dp), intent(in)  :: a   ! the location (< `x`) of the gamma distribution (usually 0)
+real(dp), intent(in)  :: b   ! the shape (> 0.) of the distribution
+real(dp), intent(in)  :: c   ! the scale (>0.) of the distribution
+real(dp), intent(out) :: cdf ! the returned value of the CDF
+
+! local variables
+
+real(dp) :: p2
+real(dp) :: x2
+
+! ---------------
+
+x2 = (x - a) / b
+p2 = c
+
+cdf = gamma_inc(p2,x2)
+
+end subroutine gamma_cdf_dp
+
+! ------------------------------------------------------------------------------
 
 real(dp) function gamma_cdf_inv(p,alpha,scale)
 
@@ -192,6 +242,10 @@ real(dp) function gamma_cdf_inv(p,alpha,scale)
 !    Compared to the original R function, we do not use the final
 !    newton step which might lead to values going to infinity for
 !    quantiles close to 1
+
+use parametersmod, only : dp
+
+implicit none
 
 ! arguments
 
@@ -228,7 +282,7 @@ real(dp) :: s5
 real(dp) :: s6
 real(dp) :: t
 
-!---------------
+! ---------------
 
 if (alpha == 0) then
 
@@ -243,7 +297,7 @@ g = log_gamma(alpha)
 
 ch = qchisq_appr(p,2.*alpha,g,eps1)
 
-if ((ch < EPS2) .or. (p > pMAX) .or. (p < pMIN)) return
+if ((ch < eps2) .or. (p > pmax) .or. (p < pmin)) return
 
 ! ----- Phase II: Iteration
 ! Call pgamma() [AS 239]  and calculate seven term taylor series
@@ -254,16 +308,16 @@ s6 = (120. + c * (346. + 127. * c)) / 5040.
 
 ch0 = ch  ! save initial approx.
 
-do i=1,MAXIT
+do i = 1,maxit
 
-  q = ch
+  q  = ch
   p1 = 0.5 * ch
 
   call gamma_cdf(p1*scale,0._dp,scale,alpha,p2)
 
   p2 = p - p2
 
-  if (ch <= 0.0) then
+  if (ch <= 0.) then
     ch = ch0
     exit
   end if
@@ -283,11 +337,11 @@ do i=1,MAXIT
 
   s2 = (420. +  a * (735. + a * (966. + a * (1141. + 1278. * a)))) / 2520.
   
-  s3 = (210. + a * (462. + a * (707. + 932. * a))) / 2520.0
+  s3 = (210. + a * (462. + a * (707. + 932. * a))) / 2520.
  
-  s4 = (252. + a * (672. + 1182. * a) + c * (294. +a * (889. + 1740. * a))) / 5040.0
+  s4 = (252. + a * (672. + 1182. * a) + c * (294. +a * (889. + 1740. * a))) / 5040.
 
-  s5 = (84. + 2264. * a + c*(1175. + 606. * a)) / 2520.0
+  s5 = (84. + 2264. * a + c*(1175. + 606. * a)) / 2520.
 
   ch = ch +  t * (1. + 0.5 * t * s1 - b * c * (s1 - b * (s2 - b * (s3 - b * (s4 - b * (s5 - b * s6))))))
 
@@ -309,9 +363,9 @@ gamma_cdf_inv = 0.5  * scale * ch
 
 end function gamma_cdf_inv
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 ! private (internal) routines
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 subroutine normal_01_cdf_inv (p,x)
 
@@ -336,6 +390,8 @@ subroutine normal_01_cdf_inv (p,x)
 ! .. note::
 !
 !    The result is accurate to about 1 part in 10^16.
+
+use parametersmod, only : dp
 
 implicit none
 
@@ -420,7 +476,7 @@ real(dp), parameter :: split2 = 5.
 real(dp) :: q
 real(dp) :: r
 
-!-----------------------------------------------
+! -----------------------------------------------
 
 if (p <= 0.) then
   x = -huge(x)
@@ -477,9 +533,13 @@ end if
 
 end subroutine normal_01_cdf_inv
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 real(dp) function evalpoly(coeff,x)
+
+use parametersmod, only : dp
+
+implicit none
 
 real(dp), dimension(:), intent(in) :: coeff
 real(dp),               intent(in) :: x
@@ -488,7 +548,7 @@ integer, allocatable, dimension(:) :: exponent
 integer :: i
 integer :: nc
 
-!----------------
+! ----------------
 
 nc = size(coeff)
 
@@ -500,11 +560,13 @@ evalpoly = sum(coeff * x**exponent)
 
 end function evalpoly
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 real(dp) function qchisq_appr(p,nu,g,tol)
 
 ! chi-square approximation of the "gamma_cdf_inv" function
+
+use parametersmod, only : dp
 
 implicit none
 
@@ -528,7 +590,7 @@ real(dp) :: t
 real(dp) :: x
 real(dp) :: lgam1pa
 
-!---------------------------------------
+! ---------------------------------------
 
 alpha = 0.5 * nu
 c     = alpha - 1.
@@ -566,7 +628,7 @@ else if (nu > 0.32) then ! using Wilson and Hilferty estimate
 else
 
   ch = 0.4
-  a = log(1 - p) + g + c * log(2.0)
+  a = log(1 - p) + g + c * log(2.)
 
   do while (abs(q - ch) > tol * abs(ch))
 
@@ -584,7 +646,7 @@ qchisq_appr = ch
 
 end function qchisq_appr
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 real(dp) function gamma_inc(p,x)
 
@@ -620,6 +682,8 @@ real(dp) function gamma_inc(p,x)
 !   Applied Statistics,
 !   Volume 37, Number 3, 1988, pages 466-473.
 
+use parametersmod, only : dp
+
 implicit none
 
 real(dp), intent(in) :: p  ! the exponent parameter (0. < P)
@@ -644,7 +708,7 @@ real(dp) :: pn5
 real(dp) :: pn6
 real(dp) :: rn
 
-!----------------------------------------
+! ----------------------------------------
 
 gamma_inc = 0._dp
 
@@ -782,7 +846,7 @@ end if
 
 end function gamma_inc
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 subroutine normal_01_cdf(x,cdf)
 
@@ -802,6 +866,8 @@ subroutine normal_01_cdf(x,cdf)
 !    Areas Under the Normal Curve,
 !    Computer Journal,
 !    Volume 12, pages 197-198, 1969.
+
+use parametersmod, only : dp
 
 implicit none
 
@@ -837,7 +903,7 @@ real(dp), parameter :: b11 =  3.99019417011
 real(dp) :: q
 real(dp) :: y
 
-!-------------------------------------------------
+! -------------------------------------------------
 
 if (abs(x) <= 1.28) then
 
@@ -870,6 +936,6 @@ end if
 
 end subroutine normal_01_cdf
 
-!------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 
 end module statsmod

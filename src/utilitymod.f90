@@ -4,35 +4,21 @@ implicit none
 
 public :: pos
 public :: matsol
+public :: roundto
 
 interface pos
-  module procedure pos_sp,pos_dp
+  module procedure pos_sp
+  module procedure pos_dp
 end interface pos
+
+interface roundto
+  module procedure roundto_s
+  module procedure roundto_v
+end interface
 
 contains
 
-! ------------------------
-
-integer function pos_dp(vect,val)
-
-! finds the index in the vector "vect" that has a value nearest to the input scalar "val"
-
-use parametersmod, only : dp
-
-implicit none
-
-! arguments
-
-real(dp), dimension(:), intent(in) :: vect
-real(dp),               intent(in) :: val
-
-! ---
-
-pos_dp = minloc(abs(vect - val),dim=1)
-
-end function pos_dp
-
-! ------------------------
+! ---------------------------------------------------------
 
 integer function pos_sp(vect,val)
 
@@ -53,7 +39,28 @@ pos_sp = minloc(abs(vect - val),dim=1)
 
 end function pos_sp
 
-! ------------------------
+! ---------------------------------------------------------
+
+integer function pos_dp(vect,val)
+
+! finds the index in the vector "vect" that has a value nearest to the input scalar "val"
+
+use parametersmod, only : dp
+
+implicit none
+
+! arguments
+
+real(dp), dimension(:), intent(in) :: vect
+real(dp),               intent(in) :: val
+
+! ---
+
+pos_dp = minloc(abs(vect - val),dim=1)
+
+end function pos_dp
+
+! ---------------------------------------------------------
 
 subroutine matsol(mat,sol)
 
@@ -162,6 +169,56 @@ end do
 
 end subroutine matsol
 
-! ------------------------
+! -----------------------------------------------------------------------
+
+function roundto_s(val,decimals)
+
+! round a scalar value to a given number of decimal places
+
+use parametersmod, only : sp
+
+implicit none
+
+real(sp), intent(in) :: val       ! the input value
+integer,  intent(in) :: decimals  ! the decimal precision
+
+real(sp) :: roundto_s
+
+real(sp) :: scale
+
+! ----
+
+scale = 10.**decimals
+
+roundto_s = real(nint(val * scale)) / scale
+
+end function roundto_s
+
+! ---------------------------------------------------------
+
+function roundto_v(val,decimals)
+
+! round a vector of values to a given number of decimal places
+
+use parametersmod, only : sp
+
+implicit none
+
+real(sp), dimension(:), intent(in) :: val       ! the input vector
+integer,                intent(in) :: decimals  ! the decimal precision
+
+real(sp), dimension(size(val)) :: roundto_v
+
+real(sp) :: scale
+
+! ----
+
+scale = 10.**decimals
+
+roundto_v = real(nint(val * scale)) / scale
+
+end function roundto_v
+
+! ---------------------------------------------------------
 
 end module utilitymod
