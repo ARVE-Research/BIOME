@@ -218,8 +218,8 @@ implicit none
 ! ---------------
 !arguments
 
-type(metvars_in),  intent(in)  :: met_in
-type(metvars_out), intent(out) :: met_out
+type(metvars_in),  intent(inout) :: met_in
+type(metvars_out), intent(out)   :: met_out
 
 ! ---------------
 !local variables
@@ -364,7 +364,7 @@ if (wetf > 0. .and. pre > 0.) then
     do
 
       !today's precipitation
-
+      
       prec = ran_gamma_gp(rndst,.true.,g_shape,g_scale,p_trans,gp_shape,gp_scale)
 
       ! enforce positive precipitation that is not more than 5% greater than the monthly total
@@ -397,8 +397,6 @@ end if
 ! 3) temperature min and max, cloud fraction
 
 ! calculate a baseline mean and SD for today's weather dependent on precip status
-
-cld = cld / 100. ! debugging edit (Leo)
 
 call meansd(pday(1),tmn,tmx,cld,wnd,dmetvars)
 
@@ -480,21 +478,21 @@ wind = roundto(wind,2)
 
 ! ---
 
+met_in%resid = resid  ! store today's residuals for tomorrow
+met_in%pday  = pday
+met_in%rndst = rndst
+
 met_out%prec  = prec
 met_out%tmin  = tmin
 met_out%tmax  = tmax
 met_out%cldf  = cldf
 met_out%wind  = wind
-met_out%pday  = pday
-met_out%rndst = rndst
-met_out%resid = resid
 met_out%tmin_mn = tmin_mn
 met_out%tmin_sd = tmin_sd
 met_out%wind_bias = slopecorr
 met_out%wind_intercept_bias = intercept_corr
 met_out%wind_mn = wind_mn
 met_out%wind_sd = wind_sd
-met_out%unorm = unorm
 
 end subroutine weathergen
 

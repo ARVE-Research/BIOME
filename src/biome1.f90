@@ -77,10 +77,10 @@ call parsecoords(coordstring,gridinfo)
 
 call calcpixels(climatefile,gridinfo)
 
-! write(0,*)gridinfo
-
 cntx = gridinfo%cntx
 cnty = gridinfo%cnty
+
+write(0,*)'allocate rectangular arrays',cntx,cnty
 
 allocate(coords(cntx,cnty))
 allocate(terrain(cntx,cnty))
@@ -105,14 +105,16 @@ call readsoil(soilfile,gridinfo,soil)
 
 call getarg(3,outfile)
 
+write(0,*)'go genoutput'
+
 call genoutputfile(jobfile,outfile,gridinfo,ofid)
 
 ! ---------------------------------
 ! check for valid pixels
 
-ncells = count(soil(:,:,1)%whc > 0. .and. climate(:,:,1)%pre >= 0.)
+ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing)
 
-write(0,'(a,i0,a)')' there are ',ncells,' valid pixels'
+write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
 allocate(pixel(ncells))
 
@@ -140,7 +142,7 @@ allocate(daily(1,nd))
 
 memreq = ncells * sizeof(daily) / 1048576
 
-write(0,'(i0,a,i0,a)')ncells,' valid cells takes ',memreq,' MB memory'
+write(0,'(a,i0,a,i0,a)')' ',ncells,' valid gridcells takes ',memreq,' MB memory'
 
 deallocate(daily)
 
@@ -152,6 +154,8 @@ end if
 allocate(daily(ncells,nd))
 
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
+
+write(0,*)'go newspline'
 
 do i = 1,ncells
 
@@ -170,8 +174,10 @@ allocate(met_out(ncells))
 
 ! initalize the random number generator
 
+write(0,*)'go random seed'
+
 do i = 1,ncells
-  call ran_seed(-10,met_in(i)%rndst)
+  call ran_seed(-104576,met_in(i)%rndst)
 end do
 
 ! initialize prior precipitation and the weather residuals
@@ -183,9 +189,10 @@ do i = 1,4
   met_in%resid(i) = 0.
 end do
 
-! start daily loop
+! ---------------------------------
+! initialization daily loop
 
-write(0,*)'start daily loop'
+write(0,*)'start initialization daily loop'
 
 j = 1
 
@@ -205,14 +212,61 @@ do m = 1,12
       
       met_in(i)%tmin = daily(i,j)%tmp - 0.5 * daily(i,j)%dtr
       met_in(i)%tmax = daily(i,j)%tmp + 0.5 * daily(i,j)%dtr
-      met_in(i)%cldf = daily(i,j)%cld
+      met_in(i)%cldf = daily(i,j)%cld * 0.01
       met_in(i)%wind = daily(i,j)%wnd
 
       ! generate daily meteorology for all valid cells for one day
-      
-      write(0,*)m,d,j,i,'weathergen'
   
       call weathergen(met_in(i),met_out(i))
+
+      write(*,*)'2022',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
+
+    end do ! cells
+    
+    j = j + 1
+    
+  end do   ! days in the month
+end do     ! month
+
+! ---------------------------------
+! computation daily loop daily loop
+
+write(0,*)'start computation daily loop'
+
+j = 1
+
+do m = 1,12
+  do d = 1,ndm(m)
+  
+    ! loop over valid cells
+
+    do i = 1,ncells
+    
+      x = pixel(i)%x
+      y = pixel(i)%y
+    
+      met_in(i)%prec = climate(x,y,m)%pre
+      met_in(i)%wetf = climate(x,y,m)%wet
+      met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
+      
+      met_in(i)%tmin = daily(i,j)%tmp - 0.5 * daily(i,j)%dtr
+      met_in(i)%tmax = daily(i,j)%tmp + 0.5 * daily(i,j)%dtr
+      met_in(i)%cldf = daily(i,j)%cld * 0.01
+      met_in(i)%wind = daily(i,j)%wnd
+
+      ! generate daily meteorology for all valid cells for one day
+  
+      call weathergen(met_in(i),met_out(i))
+
+      write(*,*)'2023',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
+      
+      ! calculate daylength and insolation
+      
+      ! estimate integrated daytime and nighttime temperatures
+      
+      ! estimate humidity
+      
+      ! estimate potential evapotranspiration for day and nighttime separately
 
     end do ! cells
     

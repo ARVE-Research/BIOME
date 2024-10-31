@@ -80,7 +80,7 @@ real(sp), dimension(:),   intent(inout) :: sol
 
 ! parameter
 
-real(sp), parameter :: tiny_sp = 1.0e-38_sp
+real(sp), parameter :: tiny_sp = tiny(1._sp)
 
 ! local variables
 

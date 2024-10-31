@@ -46,6 +46,8 @@ cntx = gridinfo%cntx
 srty = gridinfo%srty
 cnty = gridinfo%cnty
 
+write(0,*)'readcoords',srtx,cntx,srty,cnty
+
 ncstat = nf90_open(coordsfile,nf90_nowrite,ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
@@ -66,13 +68,13 @@ if (gridinfo%isproj) then
   ncstat = nf90_inq_varid(ncid,'lon',varid)
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
   
-  ncstat = nf90_get_var(ncid,varid,coords%geolon,start=[srtx,srty],count=[srtx,srty])
+  ncstat = nf90_get_var(ncid,varid,coords%geolon,start=[srtx,srty],count=[cntx,cnty])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
   ncstat = nf90_inq_varid(ncid,'lat',varid)
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
   
-  ncstat = nf90_get_var(ncid,varid,coords%geolat,start=[srtx,srty],count=[srtx,srty])
+  ncstat = nf90_get_var(ncid,varid,coords%geolat,start=[srtx,srty],count=[cntx,cnty])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 else
@@ -103,7 +105,7 @@ subroutine readterrain(terrainfile,gridinfo,terrain)
 use netcdf
 use errormod,  only : ncstat,netcdf_err
 use typesmod,  only : gridinfotype,terraintype
-use parametersmod, only : i2,stdout
+use parametersmod, only : i2,stdout,stderr
 
 implicit none
 
@@ -149,7 +151,7 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 actual_range(1) = minval(terrain%elv,mask = terrain%elv /= missing_value)
 actual_range(2) = maxval(terrain%elv,mask = terrain%elv /= missing_value)
 
-write(stdout,*)'reading elevation',actual_range
+write(stderr,*)'reading elevation',actual_range
   
 ncstat = nf90_close(ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
@@ -232,7 +234,7 @@ end subroutine readsoil
 subroutine getvar_i2(ncid,varname,gridinfo,ovar)
 
 use netcdf
-use parametersmod, only : i2,sp,stdout,rmissing
+use parametersmod, only : i2,sp,stdout,stderr,rmissing
 use errormod,      only : ncstat,netcdf_err
 use typesmod,      only : gridinfotype
 
@@ -272,7 +274,7 @@ cnty = gridinfo%cnty
 
 allocate(ivar(cntx,cnty,zlen))
 
-ivar = rmissing
+ovar = rmissing
 
 ncstat = nf90_inq_varid(ncid,varname,varid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
@@ -294,7 +296,7 @@ where (ivar /= missing_value) ovar = real(ivar) * scale_factor + add_offset
 actual_range(1) = minval(ovar,mask = ivar /= missing_value)
 actual_range(2) = maxval(ovar,mask = ivar /= missing_value)
 
-write(stdout,*)'reading ',trim(varname),actual_range
+write(stderr,*)'reading ',trim(varname),actual_range
 
 end subroutine getvar_i2
 
@@ -303,7 +305,7 @@ end subroutine getvar_i2
 subroutine getvar_sp(ncid,varname,gridinfo,ovar)
 
 use netcdf
-use parametersmod, only : i2,sp,stdout,rmissing
+use parametersmod, only : i2,sp,stdout,stderr,rmissing
 use errormod,      only : ncstat,netcdf_err
 use typesmod,      only : gridinfotype
 
@@ -344,7 +346,9 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 actual_range(1) = minval(ovar,mask = ovar /= missing_value)
 actual_range(2) = maxval(ovar,mask = ovar /= missing_value)
 
-write(stdout,*)'reading ',trim(varname),actual_range
+write(stderr,*)'reading ',trim(varname),actual_range
+
+where (ovar == missing_value) ovar = rmissing
 
 end subroutine getvar_sp
 

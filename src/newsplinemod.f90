@@ -355,7 +355,7 @@ allocate(osc_check(len))
 allocate(c2(len))
 
 d_orig    = -9999.
-osc_check = .FALSE.
+osc_check = .false.
 c2        = -9999.
 
 ! ------
