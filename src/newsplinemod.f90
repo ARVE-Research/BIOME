@@ -170,7 +170,7 @@ end do
 ! -------------------------------------------------------------------------------
 ! Solve linear system to get final mid control points
 
-call matsol(mat, solution)
+call matsol(mat,solution)
 
 ! -------------------------------------------------------------------------------
 ! Compile wall control with newly adjusted mid control points (all_cont)

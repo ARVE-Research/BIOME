@@ -6,6 +6,7 @@ use readdatamod
 use typesmod  ! going to use all of the types, but should specify
 use netcdfoutputmod
 use newsplinemod
+use orbitmod, only : getorbitpars
 use calendarmod, only : nd_365,present_mon_noleap,nm
 use randomdistmod, only : ran_seed
 use weathergenmod, only : weathergen
@@ -21,13 +22,13 @@ character(200) :: outfile
 character(60) :: coordstring
 
 type(gridinfotype) :: gridinfo
+type(orbitpars)    :: orbit
 
 type(coordstype),  allocatable, dimension(:,:)   :: coords
 type(terraintype), allocatable, dimension(:,:)   :: terrain
 type(climatetype), allocatable, dimension(:,:,:) :: climate
 type(soiltype),    allocatable, dimension(:,:,:) :: soil
 type(climatetype), allocatable, dimension(:,:)   :: daily
-
 
 type(pixeltype),   allocatable, dimension(:) :: pixel
 type(metvars_in),  allocatable, dimension(:) :: met_in
@@ -53,9 +54,10 @@ integer, dimension(nm) :: ndm
 integer :: d
 integer :: nd
 
-integer :: memreq
-integer :: maxmem = 20000  ! default amount of memory allowed for input data
+integer(i8) :: memreq
+integer(i8) :: maxmem = 20000_i8  ! default amount of memory allowed for input data
 
+integer :: yrbp
 
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile,maxmem
 
@@ -101,6 +103,13 @@ call readclimate(climatefile,gridinfo,climate)
 call readsoil(soilfile,gridinfo,soil)
 
 ! ---------------------------------
+! initialize the orbital parameters for the selected run year
+
+yrbp = 0  ! integer year before 1950 CE (negative for years after 1950 CE)
+
+call getorbitpars(yrbp,orbit)
+
+! ---------------------------------
 ! generate the output file
 
 call getarg(3,outfile)
@@ -123,7 +132,7 @@ i = 1
 do y = 1,cnty
   do x = 1,cntx
 
-    if (soil(x,y,1)%whc < 0. .or. climate(x,y,1)%pre < 0.) cycle
+    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing) cycle
     
     pixel(i)%x = x
     pixel(i)%y = y
@@ -140,7 +149,7 @@ ndm = int(present_mon_noleap)
 
 allocate(daily(1,nd))
 
-memreq = ncells * sizeof(daily) / 1048576
+memreq = ncells * sizeof(daily) / 1048576_i8
 
 write(0,'(a,i0,a,i0,a)')' ',ncells,' valid gridcells takes ',memreq,' MB memory'
 
@@ -229,7 +238,7 @@ do m = 1,12
 end do     ! month
 
 ! ---------------------------------
-! computation daily loop daily loop
+! computation daily loop
 
 write(0,*)'start computation daily loop'
 

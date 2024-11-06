@@ -77,6 +77,15 @@ end type soiltype
 
 ! ---
 
+type orbitpars
+  real(dp) :: ecc     ! eccentricity parameter
+  real(dp) :: pre     ! precession parameter
+  real(dp) :: perh    ! longitude of perhelion
+  real(dp) :: xob     ! obliquity (tilt) (degrees)
+end type orbitpars
+
+! ---
+
 type metvars_in  ! structure for weather generator input
 
   ! monthly means

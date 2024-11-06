@@ -21,4 +21,7 @@ real(sp), parameter :: hsp = huge(1._sp)    ! largest positive 4-byte real
 
 real(sp), parameter :: Tfreeze = 273.15 ! freezing temperature of freshwater (K)
 
+real(dp), parameter :: pi  = 3.14159265358979323846_dp !26433 83279 50288 41971 69399 37510 (unitless)
+real(dp), parameter :: pir = pi / 180._dp
+
 end module parametersmod
