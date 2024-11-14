@@ -2,7 +2,7 @@ module typesmod
 
 ! repository of derived types
 
-use parametersmod, only : sp,dp
+use parametersmod, only : sp,dp,nmos
 use randomdistmod, only : randomstate
 
 implicit none
@@ -74,6 +74,21 @@ type soiltype
   real(sp) :: Ksat
   real(sp) :: whc
 end type soiltype
+
+! ---
+
+type calendartype
+  character(100)          :: calname
+  integer                 :: yrbp
+  real(dp)                :: ndyr
+  real(dp), dimension(12) :: ndmr
+  integer,  dimension(12) :: ndmi
+end type calendartype
+
+type monthinfotype
+  real(dp) :: noleapyr
+  real(dp) :: leapyear
+end type monthinfotype  
 
 ! ---
 

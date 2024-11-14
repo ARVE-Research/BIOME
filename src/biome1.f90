@@ -7,9 +7,10 @@ use typesmod  ! going to use all of the types, but should specify
 use netcdfoutputmod
 use newsplinemod
 use orbitmod, only : getorbitpars
-use calendarmod, only : nd_365,present_mon_noleap,nm
+use calendarmod, only : initcalendar
 use randomdistmod, only : ran_seed
 use weathergenmod, only : weathergen
+use calendarmod
 
 implicit none
 
@@ -47,7 +48,10 @@ integer :: cnty
 
 integer :: ofid
 
-integer, dimension(nm) :: ndm
+integer, dimension(nmos) :: ndm
+
+type(calendartype) :: noleap
+type(calendartype) :: leapyr
 
 ! logical, allocatable, dimension(:,:) :: valid
 
@@ -59,6 +63,12 @@ integer(i8) :: maxmem = 20000_i8  ! default amount of memory allowed for input d
 
 integer :: yrbp
 
+integer,  dimension(nmos) :: imonlen
+real(dp), dimension(nmos) :: rmonlen
+real(dp), dimension(nmos) :: rmonbeg
+real(dp), dimension(nmos) :: rmonmid
+real(dp), dimension(nmos) :: rmonend
+
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile,maxmem
 
 ! ---------------------------------
@@ -69,6 +79,15 @@ call getarg(1,jobfile)
 open(10,file=jobfile)
 
 read(10,nml=joboptions)
+
+! ---------------------------------
+! calculate orbital parameters and month lengths for the simulation year
+
+yrbp = 6000
+
+call initcalendar(yrbp,orbit,noleap,leapyr)
+
+stop
 
 ! ---------------------------------
 ! get the coordinates for the run
@@ -101,13 +120,6 @@ call readterrain(climatefile,gridinfo,terrain)
 call readclimate(climatefile,gridinfo,climate)
 
 call readsoil(soilfile,gridinfo,soil)
-
-! ---------------------------------
-! initialize the orbital parameters for the selected run year
-
-yrbp = 0  ! integer year before 1950 CE (negative for years after 1950 CE)
-
-call getorbitpars(yrbp,orbit)
 
 ! ---------------------------------
 ! generate the output file

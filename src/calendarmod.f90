@@ -4,94 +4,448 @@ use parametersmod, only : dp
 
 implicit none
 
-integer, parameter :: nm = 12              ! number of months in the year
-integer, parameter :: nd_360 = 360         ! number of days in a 360-day year
-integer, parameter :: daysinmonth360 = 30  ! number of days in a month of a 360-day year
-integer, parameter :: nd_365 = 365         ! number of days in a 365-day "noleaps" year
-integer, parameter :: nd_366 = 366         ! number of days in a 366-day leap year
+public  :: initcalendar
+private :: kepler_time
+private :: getmonlen
+private :: monlen
+private :: adjust_to_ref_length
 
-! other calendar-related variables
+contains
 
-real(dp) :: veqday_360    = 80._dp           ! fixed vernal equinox day, 360-day year
-real(dp) :: veqday_365    = 80.5_dp          ! fixed vernal equinox day, 365-day year
-real(dp) :: veqday_366    = 81.5_dp          ! fixed vernal equinox day, 366-day year
-real(dp) :: ssday_360     = 170.5_dp         ! fixed (northern) summer solstice day, 360-day year
-real(dp) :: ssday_365     = 173._dp          ! fixed (northern) summer solstice day, 365-day year
-real(dp) :: ssday_366     = 173.5_dp         ! fixed (northern) summer solstice day, 366-day year
-real(dp) :: tropical_year = 365.24219876_dp  ! length of a tropical year (days)
-real(dp) :: progreg_year  = 365.2425_dp      ! length of a Gregorian year (days)
+! ---------------------------------------------------------
 
-integer  :: nd_progreg                       ! number of days in a 365 or 366-day year proleptic_gregorian calendar
-real(dp) :: veqday_progreg                   ! vernal equinox day in a 365 or 366-day year proleptic_gregorian calendar
-real(dp) :: midMarch                         ! mid-March day
-real(dp) :: perihelion                       ! perihelion day (in a proleptic Gregorian calendar)
-real(dp) :: aphelion                         ! aphelion day (in a proleptic Gregorian calendar)
+subroutine kepler_time(eccen,T,theta_deg,time)
 
-! month-length definitions
+! travel time along orbit relative to periapsis/perihelion (i.e. 0.0 at perihelion)
+! input:  true anomaly (theta, degrees); output:  traverse time since perihelion (time, same units as T)
+! (Curtis, H.D. (2014) Orbital Mechanics for Engineering Students, Elsevier, Ch. 3)
+! adapted from P.J. Bartlein & S.L. Shafer (2019) Paleo calendar-effect adjustments in time-slice and transient
+!         climate-model simulations (PaleoCalAdjust v1.0): impact and strategies for data analysis,
+!         Geoscientific Model Development, 12:3889-3913, doi: 10.5194/gmd-12-3889-2019
+!   - available from GitHub:  https://github.com/pjbartlein/PaleoCalAdjust or Zenodo:  https://doi.org/10.5281/zenodo.1478824
 
-real(dp) :: present_mon_360(nm) = 30._dp     ! present-day month lengths in 360-day year
+use parametersmod, only : dp,pi,pir
 
-real(dp) :: present_beg_360(nm) = &          ! present-day month beginning day in 360-day year
-    [  0._dp, 30._dp, 60._dp, 90._dp, 120._dp, 150._dp, 180._dp, 210._dp, 240._dp, 270._dp, 300._dp, 330._dp ]
+implicit none
 
-real(dp) :: present_mid_360(nm) = &          ! present-day month middle day in 360-day year
-    [ 15._dp, 45._dp, 75._dp, 105._dp, 135._dp, 165._dp, 195._dp, 225._dp, 255._dp, 285._dp, 315._dp, 345._dp ]
+! arguments
 
-real(dp) :: present_end_360(nm) = &          ! present-day month ending day in 360-day year
-    [ 30._dp, 60._dp, 90._dp, 120._dp, 150._dp, 180._dp, 210._dp, 240._dp, 270._dp, 300._dp, 330._dp, 360._dp ]   
+real(dp), intent(in)  :: eccen      ! orbital eccentricity (unitless)
+real(dp), intent(in)  :: T          ! orbital period (yrlen, days)
+real(dp), intent(in)  :: theta_deg  ! "true" anomaly (angle from perihelion (degrees)
+real(dp), intent(out) :: time       ! traverse time from periapsis (e.g. perihelion, units?)
 
-real(dp) :: present_mon_noleap(nm) = &       ! present-day month lengths in 365-day (noleap) year
-    [ 31._dp, 28._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp ]
+! local variables
 
-real(dp) :: present_beg_365(nm) = &          ! present-day month beginning day in 365-day (noleap) year
-    [  0._dp, 31._dp, 59._dp, 90._dp, 120._dp, 151._dp, 181._dp, 212._dp, 243._dp, 273._dp, 304._dp, 334._dp ]
+real(dp) :: theta_rad  ! theta_rad (radians)
+real(dp) :: E          ! eccentric anomaly
+real(dp) :: M          ! mean anomaly
 
-real(dp) :: present_mid_365(nm) = &          ! present-day month middle day in 365-day (noleap) year
-    [ 15.5_dp, 45._dp, 74.5_dp, 105._dp, 135.5_dp, 166._dp, 196.5_dp, 227.5_dp, 258._dp, 288.5_dp, 319._dp, 349.5_dp ]
+! ----
+    
+theta_rad = theta_deg * pir
+    
+E = 2._dp * atan(sqrt((1._dp - eccen) / (1._dp + eccen)) * tan(theta_rad/ 2._dp) )  ! eq 3.13b
 
-real(dp) :: present_end_365(nm) = &          ! present-day month ending day in 365-day (noleap) year
-    [ 31._dp, 59._dp, 90._dp, 120._dp, 151._dp, 181._dp, 212._dp, 243._dp, 273._dp, 304._dp, 334._dp, 365._dp ]    
+M = E - eccen * sin(E)                                                              ! eq 3.14
 
-real(dp) :: present_mon_leap(nm) = &         ! present-day month lengths in 366-day (leap) year
-    [ 31._dp, 29._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp ]
+time = (M / (2._dp * pi)) * T                                                       ! eq 3.15
 
-real(dp) :: present_beg_366(nm) = &          ! present-day month beginning day in 366-day (leap) year
-    [  0._dp, 31._dp, 60._dp, 91._dp, 121._dp, 152._dp, 182._dp, 213._dp, 244._dp, 274._dp, 305._dp, 335._dp ]
+if (time < 0._dp) time = time + T
+    
+end subroutine kepler_time    
 
-real(dp) :: present_mid_366(nm) = &          ! present-day month beginning day in 366-day (leap) year
-    [ 15.5_dp, 45.5_dp, 75.5_dp, 106._dp, 136.5_dp, 167._dp, 197.5_dp, 228.5_dp, 259._dp, 289.5_dp, 320._dp, 350.5_dp ]
+! ---------------------------------------------------------
 
-real(dp) :: present_end_366(nm) = &          ! present-day month beginning day in 366-day (leap) year
-    [ 31._dp, 60._dp, 91._dp, 121._dp, 152._dp, 182._dp, 213._dp, 244._dp, 274._dp, 305._dp, 335._dp, 366._dp ]   
+subroutine monlen(yrlen,veqday,imonlen,orbit,rmonlen,rmonbeg,rmonmid,rmonend) !,&
+!                  tt_VE_to_SS,tt_SS_to_AE,tt_AE_to_WS,tt_WS_to_VE)
 
-real(dp) :: present_mon_365_trop(nm) = &     ! present-day month lengths in a tropical year (note Feb.)
-    [ 31._dp, 28.24219876_dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp ]
+! calculate month lengths, and beginning, middle and ending day times for a particular orbital configuration, 
+! calendar and vernal equinox day using a "traverse-time/time-of-flight" expression based on Kepler's equation:
+! (Curtis, H.D. (2014) Orbital Mechanics for Engineering Students, Elsevier, Ch. 3)
+! adapted from P.J. Bartlein & S.L. Shafer (2019) Paleo calendar-effect adjustments in time-slice and transient
+!         climate-model simulations (PaleoCalAdjust v1.0): impact and strategies for data analysis,
+!         Geoscientific Model Development, 12:3889-3913, doi: 10.5194/gmd-12-3889-2019
+!   - available from GitHub:  https://github.com/pjbartlein/PaleoCalAdjust or Zenodo:  https://doi.org/10.5281/zenodo.1478824
 
-real(dp) :: present_beg_365_trop(nm) = &     ! present-day month beginning day in a tropical year
-    [  0.0000_dp, 31.0000_dp, 59.2422_dp, 90.2422_dp, 120.2422_dp, 151.2422_dp, 181.2422_dp, 212.2422_dp, 243.2422_dp, &
-        273.2422_dp, 304.2422_dp, 334.2422_dp ]
+use parametersmod, only : dp,pi,nmos
+use typesmod,      only : orbitpars
 
-real(dp) :: present_mid_365_trop(nm) = &     ! present-day month middle day in a tropical year
-    [ 15.5000_dp, 45.1211_dp, 74.7422_dp, 105.2422_dp, 135.7422_dp, 166.2422_dp, 196.7422_dp, 227.7422_dp, 258.2422_dp, &
-        288.7422_dp, 319.2422_dp, 349.7422_dp ]
+implicit none
 
-real(dp) :: present_end_365_trop(nm) = &     ! present-day month ending day in a tropical year
-    [ 31.0000_dp, 59.2422_dp, 90.2422_dp, 120.2422_dp, 151.2422_dp, 181.2422_dp, 212.2422_dp, 243.2422_dp, 273.2422_dp, &
-        304.2422_dp, 334.2422_dp, 365.2422_dp ]    
+! arguments
 
-real(dp) :: present_mon_365_progreg(nm) = &  ! present-day month lengths in a Gregorian year (note Feb.)
-    [ 31._dp, 28.2425_dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp, 31._dp, 30._dp, 31._dp, 30._dp, 31._dp ]
+real(dp),               intent(in)  :: yrlen    ! total length of year (days)
+real(dp),               intent(in)  :: veqday   ! day of year of the vernal equinox 
+integer, dimension(:),  intent(in)  :: imonlen  ! number of days in each month at present (calendar dependent)
+type(orbitpars),        intent(in)  :: orbit    ! orbital parameters
+real(dp), dimension(:), intent(out) :: rmonlen  ! month lengths
+real(dp), dimension(:), intent(out) :: rmonbeg  ! month beginning day
+real(dp), dimension(:), intent(out) :: rmonmid  ! month middle day
+real(dp), dimension(:), intent(out) :: rmonend  ! month ending day
 
-real(dp) :: present_beg_365_progreg(nm) = &  ! present-day month beginning day in a Gregorian year
-    [  0.0000_dp, 31.0000_dp, 59.2425_dp, 90.2425_dp, 120.2425_dp, 151.2425_dp, 181.242_dp, 212.2425_dp, 243.2425_dp, &
-        273.2425_dp, 304.2425_dp, 334.2425_dp ]
+! local variables
 
-real(dp) :: present_mid_365_progreg(nm) = &  ! present-day month beginning day in a Gregorian year
-    [ 15.5000_dp, 45.1213_dp, 74.7425_dp, 105.2425_dp, 135.7425_dp, 166.2425_dp, 196.7425_dp, 227.7425_dp, 258.2425_dp, &
-    288.7425_dp, 319.2425_dp, 349.7425_dp ]
+real(dp) :: eccen
+real(dp) :: perih
+real(dp) :: tt_VE_to_SS          ! traverse time, VE to SS
+real(dp) :: tt_SS_to_AE          ! traverse time, SS to AE    
+real(dp) :: tt_AE_to_WS          ! traverse time, AE to WS
+real(dp) :: tt_WS_to_VE          ! traverse time, WS to VE
+real(dp) :: angle_VE_to_Jan1     ! angle between vernal equinox and Jan 1
+real(dp) :: tt_perih_to_VE       ! traverse time, perihelion to vernal equinox
+real(dp) :: angle_perih_to_Jan1  ! angle, perihelion to Jan 1
+real(dp) :: angle_perih_to_VE    ! angle, perihelion to vernal (March) equinox
+real(dp) :: angle_perih_to_SS    ! angle, perihelion to summer (June) solstice
+real(dp) :: angle_perih_to_AE    ! angle, perihelion to autumn (September) equinox
+real(dp) :: angle_perih_to_WS    ! angle, perihelion to winter (December) solstice
+real(dp) :: tt_perih_to_SS       ! traverse time, perihelion to summer solstice
+real(dp) :: tt_perih_to_AE       ! traverse time, perihelion to autumn equinox
+real(dp) :: tt_perih_to_WS       ! traverse time, perihelion to winter solstice
 
-real(dp) :: present_end_365_progreg(nm) = &  ! present-day month beginning day in a Gregorian year
-    [ 31.0000_dp, 59.2425_dp, 90.2425_dp, 120.2425_dp, 151.2425_dp, 181.2425_dp, 212.2425_dp, 243.2425_dp, 273.2425_dp, &
-    304.2425_dp, 334.2425_dp, 365.2425_dp ]
+real(dp), dimension(nmos) :: mon_angle  ! month angle (degrees)
+real(dp), dimension(nmos) :: beg_angle
+real(dp), dimension(nmos) :: mid_angle 
+real(dp), dimension(nmos) :: end_angle  ! beginning, middle and end of month, relative to Jan 1
+
+! angles and traverse times for beginning, middle and ending days of each month 
+
+real(dp), dimension(nmos) :: perih_angle_month_beg
+real(dp), dimension(nmos) :: tt_month_beg
+real(dp), dimension(nmos) :: t_month_beg
+real(dp), dimension(nmos) :: perih_angle_month_mid
+real(dp), dimension(nmos) :: tt_month_mid
+real(dp), dimension(nmos) :: t_month_mid
+real(dp), dimension(nmos) :: perih_angle_month_end
+real(dp), dimension(nmos) :: tt_month_end
+real(dp), dimension(nmos) :: t_month_end
+
+integer  :: m  ! indices
+
+! --------
+
+eccen = orbit%ecc
+perih = orbit%perh
+
+rmonlen = 0._dp
+rmonbeg = 0._dp
+rmonmid = 0._dp
+rmonend = 0._dp
+
+! ----    
+! angle and traverse time, perihelion to vernal equinox 
+angle_perih_to_VE = 360._dp - perih
+
+! traverse time (along elliptical orbit) perihelion to vernal equinox
+call kepler_time(eccen,yrlen,angle_perih_to_VE,tt_perih_to_VE)
+
+! angle, perihelion to Jan1
+angle_perih_to_Jan1 = angle_perih_to_VE - veqday * (360._dp / yrlen)
+
+! angle, vernal equinox to Jan1 (Jan 1 begins at 0.0 (or 360.0 degrees))
+angle_VE_to_Jan1 = 360._dp - veqday * (360._dp / yrlen)
+    
+! angle, perihelion to SS
+angle_perih_to_SS = angle_perih_to_VE + 90._dp
+    
+! traverse time (along elliptical orbit) perihelion to SS
+call kepler_time(eccen,yrlen,angle_perih_to_SS,tt_perih_to_SS)
+    
+! traverse time (along elliptical orbit) VE to SS
+tt_VE_to_SS = tt_perih_to_SS - tt_perih_to_VE
+
+if (abs(tt_VE_to_SS) > 180._dp) tt_VE_to_SS = yrlen - abs(tt_VE_to_SS)
+    
+! angle, perihelion to AE
+angle_perih_to_AE = angle_perih_to_VE + 180._dp
+    
+! traverse time (along elliptical orbit) perihelion to AE
+call kepler_time(eccen,yrlen,angle_perih_to_AE,tt_perih_to_AE)
+    
+! traverse time (along elliptical orbit) SS to AE
+tt_SS_to_AE = tt_perih_to_AE - tt_perih_to_SS
+
+if (abs(tt_SS_to_AE) > 180._dp) tt_SS_to_AE = yrlen - abs(tt_SS_to_AE)
+    
+! angle, perihelion to WS
+angle_perih_to_WS = angle_perih_to_VE + 270._dp
+    
+! traverse time (along elliptical orbit) perihelion to WS
+call kepler_time(eccen,yrlen,angle_perih_to_WS,tt_perih_to_WS)
+    
+! traverse time (along elliptical orbit) AE to WS
+tt_AE_to_WS = tt_perih_to_WS - tt_perih_to_AE
+
+if (abs(tt_AE_to_WS) > 180._dp) tt_AE_to_WS = yrlen - abs(tt_AE_to_WS)
+
+! traverse time (along elliptical orbit) WS to VE
+tt_WS_to_VE = tt_perih_to_VE - tt_perih_to_WS
+
+if (abs(tt_WS_to_VE) > 180._dp) tt_WS_to_VE = yrlen - abs(tt_WS_to_VE)  
+
+! angles, traverse times, month lengths, etc. for individual months
+
+! month angle (and beginning, middle and end of month, relative to Jan1)
+
+mon_angle(1) = real(imonlen(1),dp) * 360._dp / yrlen
+
+beg_angle(1) = 0._dp
+
+mid_angle(1) = beg_angle(1) + mon_angle(1) / 2._dp
+
+end_angle(1) = mon_angle(1)
+
+do m = 2,nmos
+
+  mon_angle(m) = real(imonlen(m),dp) * 360._dp / yrlen
+
+  beg_angle(m) = beg_angle(m-1) + mon_angle(m-1)
+
+  mid_angle(m) = beg_angle(m) + mon_angle(m) / 2._dp
+
+  end_angle(m) = beg_angle(m) + mon_angle(m)
+
+end do
+
+! ----
+! angles from perihelion etc. for month beginning, mid, and ending days
+
+do m = 1,nmos
+    
+  ! angle from perihelion for each month's beginning, middle and ending days (on circular orbit)
+
+  perih_angle_month_beg(m) = angle_perih_to_Jan1 + beg_angle(m) 
+  perih_angle_month_mid(m) = angle_perih_to_Jan1 + mid_angle(m) 
+  perih_angle_month_end(m) = angle_perih_to_Jan1 + end_angle(m)  
+  
+  ! traverse times from perihelion for each month's beginning, middle and ending days (on elliptical orbit)
+
+  call kepler_time(eccen,yrlen,perih_angle_month_beg(m),tt_month_beg(m))
+  call kepler_time(eccen,yrlen,perih_angle_month_mid(m),tt_month_mid(m))
+  call kepler_time(eccen,yrlen,perih_angle_month_end(m),tt_month_end(m))
+    
+  ! traverse time from vernal equinox for each month's beginning, middle and ending days (on elliptical orbit)
+
+  t_month_beg(m) = tt_month_beg(m) - tt_perih_to_VE
+  t_month_mid(m) = tt_month_mid(m) - tt_perih_to_VE
+  t_month_end(m) = tt_month_end(m) - tt_perih_to_VE
+    
+  ! beginning, middle and ending days of each month (relative to Jan1)
+
+  rmonbeg(m) = dmod(t_month_beg(m) + veqday, yrlen)
+
+  if (perih_angle_month_beg(m) > 360._dp) rmonbeg(m) = rmonbeg(m) + yrlen
+
+  rmonmid(m) = dmod(t_month_mid(m) + veqday, yrlen)
+
+  if (perih_angle_month_mid(m) > 360._dp) rmonmid(m) = rmonmid(m) + yrlen
+
+  rmonend(m) = dmod(t_month_end(m) + veqday, yrlen) 
+
+  if (perih_angle_month_end(m) > 360._dp) rmonend(m) = rmonend(m) + yrlen
+    
+end do
+    
+! fixup for ending day of last month (when end of last month appers in beginning of year)
+
+if (rmonend(nmos) < 30._dp) rmonend(nmos) = rmonend(nmos) + yrlen  
+
+! month length (month beginning to next month beginning)
+
+do m = 1,nmos-1
+
+  rmonlen(m) = t_month_beg(m+1) - t_month_beg(m)
+
+  if (rmonlen(m) <= 0._dp) rmonlen(m) = rmonlen(m) + yrlen
+
+end do
+
+rmonlen(nmos) = t_month_beg(1) - t_month_beg(nmos)
+
+if (rmonlen(nmos) <= 0._dp) rmonlen(nmos) = rmonlen(nmos) + yrlen
+
+end subroutine monlen
+
+! ---------------------------------------------------------
+
+subroutine adjust_to_ref_length(rmonlen,rmonlenref,rmonlentarg)
+
+use parametersmod, only : dp
+
+implicit none
+
+! arguments
+
+real(dp), dimension(:), intent(inout) :: rmonlen      ! real month lengths
+real(dp), dimension(:), intent(in)    :: rmonlenref   ! reference month lengths (usually calculated 0 ka)
+real(dp), dimension(:), intent(in)    :: rmonlentarg  ! target month lengths (usually conventional 0 ka)
+
+! ----
+! adjust rmonlen to reference year
+
+rmonlen = rmonlen * (rmonlentarg / rmonlenref)
+    
+end subroutine adjust_to_ref_length
+
+! ---------------------------------------------------------
+
+subroutine getmonlen(orbit,ndyr,ndm)
+
+! get number of days per month
+
+use parametersmod, only : dp,nmos,nd_365,nd_366,veqday_365,present_mon_noleap,veqday_366,present_mon_leap
+use typesmod,      only : monthinfotype,orbitpars
+
+implicit none
+
+! arguments
+
+type(orbitpars),        intent(in)  :: orbit
+integer,                intent(in)  :: ndyr
+real(dp), dimension(:), intent(out) :: ndm
+
+! local variables
+
+logical :: leapyear
+
+real(dp) :: yrlen
+real(dp) :: veqday
+
+integer,  dimension(nmos) :: imonlen
+real(dp), dimension(nmos) :: rmonbeg 
+real(dp), dimension(nmos) :: rmonmid
+real(dp), dimension(nmos) :: rmonend
+
+! ----
+! calculate real month lengths
+
+if (ndyr == 365) then
+  leapyear = .false.
+else if (ndyr == 366) then
+  leapyear = .true.
+else
+  write(0,*)'error getmonlen: ndyr not supported'
+  stop
+end if
+
+if (leapyear) then
+
+  yrlen = real(nd_366,dp)
+  
+  veqday = veqday_366
+  
+  imonlen = nint(present_mon_leap)
+  
+  call monlen(yrlen,veqday,imonlen,orbit,ndm,rmonbeg,rmonmid,rmonend)
+
+else
+
+  yrlen = real(nd_365,dp)
+
+  veqday = veqday_365
+  
+  imonlen = nint(present_mon_noleap)
+  
+  call monlen(yrlen,veqday,imonlen,orbit,ndm,rmonbeg,rmonmid,rmonend)
+
+end if
+
+! ----
+
+end subroutine getmonlen
+
+! ---------------------------------------------------------
+
+subroutine initcalendar(yrbp,orbit,noleap,leapyr)
+
+! given a year BP, calculate the orbital parameters and the month lengths of a standard and leap year
+
+use parametersmod
+use orbitmod
+use typesmod
+
+implicit none
+
+! arguments
+
+integer,             intent(in)  :: yrbp
+type(orbitpars),     intent(out) :: orbit
+type(calendartype),  intent(out) :: noleap
+type(calendartype),  intent(out) :: leapyr
+
+! local variables
+
+integer :: m
+
+real(dp), dimension(nmos) :: ndm0noleap
+real(dp), dimension(nmos) :: ndm0leapyr
+real(dp), dimension(nmos) :: ndm1noleap
+real(dp), dimension(nmos) :: ndm1leapyr
+
+real(dp) :: yrlen0
+real(dp) :: yrlen1
+
+! ----
+! initialize the reference month lengths for ~0ka for 365- and 366-day years
+
+call getorbitpars(0,orbit)  ! estimate orbital parameters for 0ka
+
+! get number of days per month (real number) for 0ka 365 and 366-day years
+
+call getmonlen(orbit,365,ndm0noleap)
+call getmonlen(orbit,366,ndm0leapyr)
+
+! initialize the orbital parameters for the selected run year
+
+call getorbitpars(yrbp,orbit)  ! estimate orbital parameters for 0ka
+
+! calculate real month lengths for the target year
+
+call getmonlen(orbit,365,ndm1noleap)
+call getmonlen(orbit,366,ndm1leapyr)
+
+! calculate real month lengths for the target year by normalizing to 0ka
+
+noleap%ndmr = ndm1noleap / ndm0noleap * present_mon_noleap
+
+leapyr%ndmr = ndm1leapyr / ndm0leapyr * present_mon_leap
+
+! --
+! correct for total year length: standard year
+
+yrlen0 = 365._dp
+yrlen1 = sum(noleap%ndmr)
+
+noleap%ndmr = noleap%ndmr / (yrlen1 / yrlen0)
+
+noleap%ndmi = nint(noleap%ndmr)
+
+! --
+! correct for total year length: leap year
+
+yrlen0 = 366._dp
+yrlen1 = sum(leapyr%ndmr)
+
+leapyr%ndmr = leapyr%ndmr / (yrlen1 / yrlen0)
+
+leapyr%ndmi = nint(leapyr%ndmr)
+
+! --
+
+do m = 1,nmos
+  write(0,*)m,ndm0noleap(m),ndm1noleap(m),noleap%ndmr(m),noleap%ndmi(m)
+end do
+
+write(0,*)
+
+do m = 1,nmos
+  write(0,*)m,ndm0leapyr(m),ndm1leapyr(m),leapyr%ndmr(m),leapyr%ndmi(m)
+end do
+
+write(0,*)sum(noleap%ndmi),sum(leapyr%ndmi)
+
+end subroutine initcalendar
+
+! ---------------------------------------------------------
 
 end module calendarmod
