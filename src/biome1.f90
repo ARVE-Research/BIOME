@@ -266,6 +266,7 @@ do m = 1,nmos
   do d = 1,ndm(m)
     
     ! calculate true solar longitude (for daylength)
+    ! only need to do this once per day, not for each cell
     
     slon = truelon(orbit,cal,doy)
   
@@ -331,6 +332,11 @@ doy = 1
 
 do m = 1,nmos
   do d = 1,ndm(m)
+
+    ! calculate true solar longitude for daylength, 
+    ! only need to do this once per day, not for each cell
+    
+    slon = truelon(orbit,cal,doy)
   
     ! loop over valid cells
 
