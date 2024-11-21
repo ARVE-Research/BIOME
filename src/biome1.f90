@@ -47,7 +47,6 @@ integer :: x
 integer :: y
 integer :: m
 integer :: i
-integer :: j
 
 integer :: doy
 
@@ -316,16 +315,6 @@ do m = 1,nmos
       
       write(0,10)m,d,met_out(i,1)
 
-!       write(0,*)'doy',doy,m,d
-!       write(0,*)met_out(i,:)%dayl
-!       write(0,*)met_out(i,:)%prec
-!       write(0,*)met_out(i,:)%tmin
-!       write(0,*)met_out(i,:)%tmax
-!       write(0,*)met_out(i,:)%tday
-!       write(0,*)met_out(i,:)%tnight
-!       write(0,*)
-!       write(*,*)'2022',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
-
     end do ! cells
     
     doy = doy + 1
@@ -333,14 +322,12 @@ do m = 1,nmos
   end do   ! days in the month
 end do     ! month
 
-stop
-
 ! ---------------------------------
 ! computation daily loop
 
 write(0,*)'start computation daily loop'
 
-j = 1
+doy = 1
 
 do m = 1,nmos
   do d = 1,ndm(m)
@@ -356,43 +343,43 @@ do m = 1,nmos
       met_in(i)%wetf = climate(x,y,m)%wet
       met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
       
-      met_in(i)%tmin = daily(i,j)%tmp - 0.5 * daily(i,j)%dtr
-      met_in(i)%tmax = daily(i,j)%tmp + 0.5 * daily(i,j)%dtr
-      met_in(i)%cldf = daily(i,j)%cld * 0.01
-      met_in(i)%wind = daily(i,j)%wnd
+      met_in(i)%tmin = daily(i,doy)%tmp - 0.5 * daily(i,doy)%dtr
+      met_in(i)%tmax = daily(i,doy)%tmp + 0.5 * daily(i,doy)%dtr
+      met_in(i)%cldf = daily(i,doy)%cld * 0.01
+      met_in(i)%wind = daily(i,doy)%wnd
 
       ! generate daily meteorology for all valid cells for one day
   
       call weathergen(met_in(i),met_out(i,1))
-
-      ! write(*,*)'2023',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
       
       ! calculate daylength and insolation
       
       latr = coords(x,y)%geolat * pir
       
-      !call insol(slon,orbit,latr,met_out(i,1)%rad0,met_out(i,1)%dayl)
       call insol(slon,orbit,latr,solar)
       
       met_out(i,2)%rad0 = solar%rad0
       met_out(i,2)%dayl = solar%dayl
       
-      ! write(0,*)coords(x,y)%geolat,doy,m,d,rad0,dayl
+      ! met_out(:,1) = current day values, met_out(:,2) = next day day values
       
+      met_out(i,:) = eoshift(met_out(i,:),-1,met_out(i,2))
       
-      ! estimate integrated daytime and nighttime temperatures
-      ! because estimating nighttime temperature requires knowing the following day's temperature,
-      ! this calculation will refer to the previous day
-      
-      ! call diurnaltemp
+      ! calculate integrated day- and night-time temperature
 
-      ! estimate humidity
+      call diurnaltemp(met_out(i,:))
       
-      ! estimate potential evapotranspiration for day and nighttime separately
+      albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
+
+      ! calculate surface solar radiation and potential evapotranspiration
+
+      call radpet(pixel(i),solar,albedo,met_out(i,1))
+      
+      write(0,10)m,d,met_out(i,1)
 
     end do ! cells
     
-    j = j + 1
+    doy = doy + 1
     
   end do   ! days in the month
 end do     ! month
