@@ -13,8 +13,11 @@ biome1_SOURCES =       \
   netcdfoutputmod.f90  \
   orbitmod.f90         \
   calendarmod.f90      \
+  insolationmod.f90    \
   newsplinemod.f90     \
   weathergenmod.f90    \
+  diurnaltempmod.f90   \
+  radiationmod.f90     \
   biome1.f90
 
 clean-local:

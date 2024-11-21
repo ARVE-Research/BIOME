@@ -43,6 +43,38 @@ contains
 
 ! ---------------------------------------------------------
 
+integer function iminloc(vect)
+
+use parametersmod, only : sp
+
+implicit none
+
+real(sp), dimension(:), intent(in) :: vect
+
+! ---
+
+iminloc = minloc(vect,dim=1)
+
+end function iminloc
+
+! ---------------------------------------------------------
+
+integer function imaxloc(vect)
+
+use parametersmod, only : sp
+
+implicit none
+
+real(sp), dimension(:), intent(in) :: vect
+
+! ---
+
+imaxloc = maxloc(vect,dim=1)
+
+end function imaxloc
+
+! ---------------------------------------------------------
+
 integer function pos_sp(vect,val)
 
 ! finds the index in the vector "vect" that has a value nearest to the input scalar "val"
@@ -727,6 +759,46 @@ angleinterp_dp = r2 / pir
 if (angleinterp_dp >= 360._dp) angleinterp_dp = angleinterp_dp - 360._dp
 
 end function angleinterp_dp
+
+! ---------------------------------------------------------
+
+integer function bp2ce(yrbp)
+
+! returns the year CE based on a year BP
+
+implicit none
+
+integer, intent(in) :: yrbp
+
+if (yrbp < 1950) then
+
+  bp2ce = 1950 - yrbp
+
+else
+
+  bp2ce = 1949 - yrbp
+
+end if
+
+end function bp2ce
+
+! ---------------------------------------------------------
+
+logical function leapyear(yearCE)
+  
+implicit none
+
+integer, intent(in) :: yearCE  !requires year CE as input (negative is BCE, no year zero)
+
+!---
+
+if ((mod(yearCE,4) == 0 .and. mod(yearCE,100) /= 0) .or. mod(yearCE,400) == 0) then
+  leapyear = .true.
+else
+  leapyear = .false.
+end if
+
+end function leapyear
 
 ! ---------------------------------------------------------
 

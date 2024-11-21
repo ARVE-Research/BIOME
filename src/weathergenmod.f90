@@ -482,17 +482,20 @@ met_in%resid = resid  ! store today's residuals for tomorrow
 met_in%pday  = pday
 met_in%rndst = rndst
 
+! standard output
 met_out%prec  = prec
 met_out%tmin  = tmin
 met_out%tmax  = tmax
 met_out%cldf  = cldf
 met_out%wind  = wind
-met_out%tmin_mn = tmin_mn
-met_out%tmin_sd = tmin_sd
-met_out%wind_bias = slopecorr
-met_out%wind_intercept_bias = intercept_corr
-met_out%wind_mn = wind_mn
-met_out%wind_sd = wind_sd
+
+! diagnostic output: if you want to use these, uncomment the variable declarations in typesmod.f90
+! met_out%tmin_mn = tmin_mn
+! met_out%tmin_sd = tmin_sd
+! met_out%wind_bias = slopecorr
+! met_out%wind_intercept_bias = intercept_corr
+! met_out%wind_mn = wind_mn
+! met_out%wind_sd = wind_sd
 
 end subroutine weathergen
 

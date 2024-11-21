@@ -5,12 +5,16 @@ use coordsmod
 use readdatamod
 use typesmod  ! going to use all of the types, but should specify
 use netcdfoutputmod
+use utilitymod,      only : bp2ce,leapyear
 use newsplinemod
-use orbitmod, only : getorbitpars
-use calendarmod, only : initcalendar
-use randomdistmod, only : ran_seed
-use weathergenmod, only : weathergen
+use orbitmod,        only : getorbitpars
+use calendarmod,     only : initcalendar
+use randomdistmod,   only : ran_seed
+use weathergenmod,   only : weathergen
 use calendarmod
+use insolationmod,   only : truelon,insol
+use diurnaltempmod,  only : diurnaltemp
+use radiationmod,    only : initairmass,elev_corr,radpet,Pjj
 
 implicit none
 
@@ -33,7 +37,9 @@ type(climatetype), allocatable, dimension(:,:)   :: daily
 
 type(pixeltype),   allocatable, dimension(:) :: pixel
 type(metvars_in),  allocatable, dimension(:) :: met_in
-type(metvars_out), allocatable, dimension(:) :: met_out
+type(metvars_out), allocatable, dimension(:,:) :: met_out
+
+type(solarpars) :: solar
 
 integer :: ncells
 
@@ -43,31 +49,33 @@ integer :: m
 integer :: i
 integer :: j
 
+integer :: doy
+
 integer :: cntx
 integer :: cnty
 
 integer :: ofid
 
+integer :: ndy
 integer, dimension(nmos) :: ndm
 
-type(calendartype) :: noleap
-type(calendartype) :: leapyr
 
-! logical, allocatable, dimension(:,:) :: valid
+type(calendarstype), target  :: calendar
+type(calendartype),  pointer :: cal
 
 integer :: d
-integer :: nd
 
 integer(i8) :: memreq
 integer(i8) :: maxmem = 20000_i8  ! default amount of memory allowed for input data
 
 integer :: yrbp
 
-integer,  dimension(nmos) :: imonlen
-real(dp), dimension(nmos) :: rmonlen
-real(dp), dimension(nmos) :: rmonbeg
-real(dp), dimension(nmos) :: rmonmid
-real(dp), dimension(nmos) :: rmonend
+real(dp) :: slon  ! true solar longitude, for insolation calculations (radians)
+real(dp) :: latr  ! geodesic latitude (radians)
+real(dp) :: latd  ! geodesic latitude (degrees)
+
+real(sp) :: albedo
+! real(sp) :: Ratm   ! relative atmospheric pressure
 
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile,maxmem
 
@@ -83,11 +91,21 @@ read(10,nml=joboptions)
 ! ---------------------------------
 ! calculate orbital parameters and month lengths for the simulation year
 
-yrbp = 6000
+yrbp = -73
 
-call initcalendar(yrbp,orbit,noleap,leapyr)
+call initcalendar(yrbp,orbit,calendar)
 
-stop
+if (leapyear(bp2ce(yrbp))) then
+  cal => calendar%leapyr
+else
+  cal => calendar%noleap
+end if
+
+ndy = cal%ndyr
+ndm = cal%ndmi
+
+write(0,*)'orbit: ',orbit
+write(0,*)'calendar: ',ndy,ndm
 
 ! ---------------------------------
 ! get the coordinates for the run
@@ -105,7 +123,7 @@ write(0,*)'allocate rectangular arrays',cntx,cnty
 
 allocate(coords(cntx,cnty))
 allocate(terrain(cntx,cnty))
-allocate(climate(cntx,cnty,12))
+allocate(climate(cntx,cnty,nmos))
 allocate(soil(cntx,cnty,6))
 
 ! ---------------------------------
@@ -149,17 +167,29 @@ do y = 1,cnty
     pixel(i)%x = x
     pixel(i)%y = y
     
+    pixel(i)%lon = coords(x,y)%geolon
+    pixel(i)%lat = coords(x,y)%geolat
+    
+    ! temperature of the coldest month
+
+    pixel(i)%tcm = minval(climate(x,y,:)%tmp)
+    
+    ! precipitation equitability index, used in airmass calculations for surface radiation
+
+    pixel(i)%Pjj = Pjj(climate(x,y,:)%tmp,climate(x,y,:)%pre) 
+    
+    ! relative atmospheric pressure
+    
+    pixel(i)%Ratm = elev_corr(terrain(x,y)%elv)
+    
     i = i + 1
 
   end do
 end do
 
-nd  = nd_365
-ndm = int(present_mon_noleap)
-
 ! at this point should make a quick check for total memory requirement and take appropriate action if the amount is too large
 
-allocate(daily(1,nd))
+allocate(daily(1,ndy))
 
 memreq = ncells * sizeof(daily) / 1048576_i8
 
@@ -172,7 +202,7 @@ if (memreq > maxmem) then
   stop
 end if
 
-allocate(daily(ncells,nd))
+allocate(daily(ncells,ndy))
 
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
 
@@ -183,15 +213,15 @@ do i = 1,ncells
   x = pixel(i)%x
   y = pixel(i)%y
   
-  call newspline(climate(x,y,:)%tmp,ndm,[climate(x,y,12)%tmp,climate(x,y,1)%tmp],daily(i,:)%tmp)
-  call newspline(climate(x,y,:)%dtr,ndm,[climate(x,y,12)%dtr,climate(x,y,1)%dtr],daily(i,:)%dtr)
-  call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,12)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
-  call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,12)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
+  call newspline(climate(x,y,:)%tmp,ndm,[climate(x,y,nmos)%tmp,climate(x,y,1)%tmp],daily(i,:)%tmp)
+  call newspline(climate(x,y,:)%dtr,ndm,[climate(x,y,nmos)%dtr,climate(x,y,1)%dtr],daily(i,:)%dtr)
+  call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
+  call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
     
 end do
 
 allocate(met_in(ncells))
-allocate(met_out(ncells))
+allocate(met_out(ncells,2))  ! for the current and next day
 
 ! initalize the random number generator
 
@@ -200,6 +230,10 @@ write(0,*)'go random seed'
 do i = 1,ncells
   call ran_seed(-104576,met_in(i)%rndst)
 end do
+
+! initialize airmass parameters
+
+call initairmass()
 
 ! initialize prior precipitation and the weather residuals
 
@@ -210,44 +244,96 @@ do i = 1,4
   met_in%resid(i) = 0.
 end do
 
+met_out%tmin = 0.
+met_out%tmax = 0.
+met_out%prec = 0.
+met_out%cldf = 0.
+met_out%wind = 0.
+met_out%rad0 = 0.
+met_out%dayl = 0.
+met_out%tday = 0.
+met_out%tnight= 0.
+
 ! ---------------------------------
 ! initialization daily loop
 
+10 format(2i4,f8.3,f6.1,2f7.1,f7.3,f7.1,3f7.1,2f7.1,f7.1,2f10.1,f7.1)
+
 write(0,*)'start initialization daily loop'
 
-j = 1
+doy = 1  ! day of year counter
 
-do m = 1,12
+do m = 1,nmos
   do d = 1,ndm(m)
+    
+    ! calculate true solar longitude (for daylength)
+    
+    slon = truelon(orbit,cal,doy)
   
     ! loop over valid cells
 
     do i = 1,ncells
-    
+
       x = pixel(i)%x
       y = pixel(i)%y
-    
+      
+      latd = coords(x,y)%geolat
+      latr = latd * pir
+
       met_in(i)%prec = climate(x,y,m)%pre
       met_in(i)%wetf = climate(x,y,m)%wet
-      met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
-      
-      met_in(i)%tmin = daily(i,j)%tmp - 0.5 * daily(i,j)%dtr
-      met_in(i)%tmax = daily(i,j)%tmp + 0.5 * daily(i,j)%dtr
-      met_in(i)%cldf = daily(i,j)%cld * 0.01
-      met_in(i)%wind = daily(i,j)%wnd
+      met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
+
+      met_in(i)%tmin = daily(i,doy)%tmp - 0.5 * daily(i,doy)%dtr
+      met_in(i)%tmax = daily(i,doy)%tmp + 0.5 * daily(i,doy)%dtr
+      met_in(i)%cldf = daily(i,doy)%cld * 0.01
+      met_in(i)%wind = daily(i,doy)%wnd
 
       ! generate daily meteorology for all valid cells for one day
-  
-      call weathergen(met_in(i),met_out(i))
 
-      write(*,*)'2022',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
+      call weathergen(met_in(i),met_out(i,2))
+
+      ! calculate top-of-the-atmosphere insolation and daylength
+      
+      call insol(slon,orbit,latr,solar)
+      
+      met_out(i,2)%rad0 = solar%rad0
+      met_out(i,2)%dayl = solar%dayl
+
+      ! met_out(:,1) = current day values, met_out(:,2) = next day day values
+      
+      met_out(i,:) = eoshift(met_out(i,:),-1,met_out(i,2))
+      
+      ! calculate integrated day- and night-time temperature
+
+      call diurnaltemp(met_out(i,:))
+      
+      albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
+
+      ! calculate surface solar radiation and potential evapotranspiration
+
+      call radpet(pixel(i),solar,albedo,met_out(i,1))
+      
+      write(0,10)m,d,met_out(i,1)
+
+!       write(0,*)'doy',doy,m,d
+!       write(0,*)met_out(i,:)%dayl
+!       write(0,*)met_out(i,:)%prec
+!       write(0,*)met_out(i,:)%tmin
+!       write(0,*)met_out(i,:)%tmax
+!       write(0,*)met_out(i,:)%tday
+!       write(0,*)met_out(i,:)%tnight
+!       write(0,*)
+!       write(*,*)'2022',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
 
     end do ! cells
     
-    j = j + 1
+    doy = doy + 1
     
   end do   ! days in the month
 end do     ! month
+
+stop
 
 ! ---------------------------------
 ! computation daily loop
@@ -256,7 +342,7 @@ write(0,*)'start computation daily loop'
 
 j = 1
 
-do m = 1,12
+do m = 1,nmos
   do d = 1,ndm(m)
   
     ! loop over valid cells
@@ -277,14 +363,29 @@ do m = 1,12
 
       ! generate daily meteorology for all valid cells for one day
   
-      call weathergen(met_in(i),met_out(i))
+      call weathergen(met_in(i),met_out(i,1))
 
-      write(*,*)'2023',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
+      ! write(*,*)'2023',m,d,j,met_out(i)%prec,met_out(i)%tmin,met_out(i)%tmax,met_out(i)%cldf,met_out(i)%wind
       
       ! calculate daylength and insolation
       
-      ! estimate integrated daytime and nighttime temperatures
+      latr = coords(x,y)%geolat * pir
       
+      !call insol(slon,orbit,latr,met_out(i,1)%rad0,met_out(i,1)%dayl)
+      call insol(slon,orbit,latr,solar)
+      
+      met_out(i,2)%rad0 = solar%rad0
+      met_out(i,2)%dayl = solar%dayl
+      
+      ! write(0,*)coords(x,y)%geolat,doy,m,d,rad0,dayl
+      
+      
+      ! estimate integrated daytime and nighttime temperatures
+      ! because estimating nighttime temperature requires knowing the following day's temperature,
+      ! this calculation will refer to the previous day
+      
+      ! call diurnaltemp
+
       ! estimate humidity
       
       ! estimate potential evapotranspiration for day and nighttime separately

@@ -85,11 +85,15 @@ else
   ncstat = nf90_get_var(ncid,varid,coords(:,1)%xcoord,start=[srtx],count=[cntx])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
+  coords%geolon = coords%xcoord
+
   ncstat = nf90_inq_varid(ncid,'lat',varid)
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
   
   ncstat = nf90_get_var(ncid,varid,coords(1,:)%ycoord,start=[srty],count=[cnty])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  coords%geolat = coords%ycoord
 
 end if
   
@@ -103,8 +107,8 @@ end subroutine readcoords
 subroutine readterrain(terrainfile,gridinfo,terrain)
 
 use netcdf
-use errormod,  only : ncstat,netcdf_err
-use typesmod,  only : gridinfotype,terraintype
+use errormod,      only : ncstat,netcdf_err
+use typesmod,      only : gridinfotype,terraintype
 use parametersmod, only : i2,stdout,stderr
 
 implicit none
