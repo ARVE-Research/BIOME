@@ -224,8 +224,6 @@ integer :: ncid
 ncstat = nf90_open(soilfile,nf90_nowrite,ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-write(0,*)soilfile
-
 call getvar_sp(ncid,'Tsat',gridinfo,soil%Tsat)
 call getvar_sp(ncid,'Ksat',gridinfo,soil%Ksat)
 call getvar_sp(ncid,'whc',gridinfo,soil%whc)
@@ -314,6 +312,7 @@ use netcdf
 use parametersmod, only : i2,sp,stdout,stderr,rmissing
 use errormod,      only : ncstat,netcdf_err
 use typesmod,      only : gridinfotype
+use ieee_arithmetic
 
 implicit none
 
@@ -340,9 +339,6 @@ cntx = gridinfo%cntx
 srty = gridinfo%srty
 cnty = gridinfo%cnty
 
-write(0,*)'getvar sp',gridinfo%cntx,gridinfo%cnty
-write(0,*)size(ovar,dim=1),size(ovar,dim=2),size(ovar,dim=3)
-
 ncstat = nf90_inq_varid(ncid,varname,varid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
@@ -352,8 +348,10 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 ncstat = nf90_get_att(ncid,varid,'missing_value',missing_value)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-! actual_range(1) = minval(ovar,mask = ovar /= missing_value)
-! actual_range(2) = maxval(ovar,mask = ovar /= missing_value)
+where (ieee_is_nan(ovar)) ovar = missing_value
+
+actual_range(1) = minval(ovar,mask = ovar /= missing_value)
+actual_range(2) = maxval(ovar,mask = ovar /= missing_value)
 
 write(stderr,*)'reading ',trim(varname),actual_range
 
