@@ -12,6 +12,7 @@ public  :: initairmass
 public  :: Pjj
 public  :: elev_corr
 public  :: radpet
+public  :: dewpoint
 
 private :: airmass
 private :: surf_sw
@@ -124,27 +125,30 @@ end function elev_corr
 
 subroutine radpet(pixel,solar,albedo,met)
 
+! calculate surface radiation budget and potential evapotranspiration
+
 use parametersmod, only : sp,dp,pir
-use typesmod,      only : orbitpars,airmasspars,pixeltype,solarpars,metvars_out
+use typesmod,      only : orbitpars,airmasspars,pixeltype,solarpars,metvars_daily
 
 implicit none
 
 ! arguments
 
-type(pixeltype),        intent(in)    :: pixel
-type(solarpars),        intent(in)    :: solar
-real(sp),               intent(in)    :: albedo  ! surface shortwave albedo
-type(metvars_out),      intent(inout) :: met
+type(pixeltype),   intent(in)    :: pixel
+type(solarpars),   intent(in)    :: solar
+real(sp),          intent(in)    :: albedo  ! surface shortwave albedo
+type(metvars_daily), intent(inout) :: met
 
 ! local variables
 
 real(dp) :: lat   ! latitude (degrees)
-real(sp) :: temp  ! daytime mean temperature (C)
-real(sp) :: prec  ! total precipitation
+real(sp) :: tday  ! daytime mean temperature (C)
+real(sp) :: prec  ! daily total precipitation
 real(sp) :: cldf  ! cloud cover fraction
-real(sp) :: tdew  ! dewpoint temperature (C)
+real(sp) :: tdew  ! estimated dewpoint temperature (degC)
 
 real(sp) :: tcm   ! temperature of the coldest month
+real(sp) :: Pann  ! total annual precipitation (mm) 
 real(sp) :: Pjj   ! precipitation equitability index 
 real(sp) :: Ratm  ! relative atmospheric pressure (based on elevation)
 
@@ -152,7 +156,6 @@ type(airmasspars) :: air
 
 real(sp) :: toa_sw  ! top of the atmosphere downwelling shortwave rad (kJ m-2 d-1)
 real(sp) :: delta   ! solar declination (degrees)
-real(sp) :: pet0    ! previous value for PET (mm d-1)
 real(sp) :: direct  ! direct beam surface downwelling shortwave (kJ m-2 d-1)
 real(sp) :: diffuse ! diffuse surface downwelling shortwave (kJ m-2 d-1)
 real(sp) :: lw_rad  ! net longwave (kJ m-2 d-1)
@@ -161,7 +164,12 @@ real(sp) :: rad0
 real(sp) :: dayl    ! day length (h)
 real(sp) :: sw_rad  ! total surface downwelling shortwave (kJ m-2 d-1)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
-real(sp) :: pet     ! day potential evapotranspiraton (mm)
+
+real(sp) :: pet0    ! previous value for PET (mm d-1)
+real(sp) :: dpet    ! day potential evapotranspiraton (mm)
+
+real(sp) :: tmin
+real(sp) :: tmax
 
 ! counters
 
@@ -169,41 +177,52 @@ integer :: i
 
 ! ----------------------------------------------------------------------------------
 
-temp = met%tday
-prec = met%prec
-cldf = met%cldf
-
-lat = pixel%lat
-tcm = pixel%tcm
-Pjj = pixel%Pjj
-Ratm = pixel%Ratm
-
-rad0 = solar%rad0
-dayl = solar%dayl
+rad0  = solar%rad0
+dayl  = solar%dayl
 delta = solar%delta / pir    ! convert radians to degrees
 
-toa_sw = rad0 * dayl * 3.6  ! convert W to kJ
+tmin = met%tmin
+tmax = met%tmax
+tday = met%tday
+cldf = met%cldf
+prec = met%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night
+
+lat  = pixel%lat
+tcm  = pixel%tcm
+Pjj  = pixel%Pjj
+Pann = pixel%Pann
+Ratm = pixel%Ratm
+
+toa_sw = rad0 * dayl * 3.6   ! convert W m-2 to kJ m-2 d-1
+
+! calculate the airmass based on latitude, solar declination, daylength, and relative pressure
 
 call airmass(lat,delta,dayl,Ratm,air)
 
-call surf_lw(temp,cldf,dayl,lw_rad,tdew)
+! iterate to estimate dewpoint, surface radiation budget, potential evapotranspiration
 
 i = 1
 
-pet  = 0.
-pet0 = 0.
+pet0 = 1.
+dpet = pet0
 
-do ! because of the weak dependence of surface shortwave on PET, we equilibrate PET and surf_sw
+do
 
-  call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,pet,direct,diffuse)
+  tdew = dewpoint(tmin,tmax,dpet,Pann)
+
+  lw_rad = surf_lw(tday,tdew,cldf,dayl)
+
+  call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,dpet,direct,diffuse)
 
   sw_rad = direct + diffuse
 
-  call netrad_pet(temp,sw_rad,lw_rad,albedo,netrad,pet)
+  call netrad_pet(tday,sw_rad,lw_rad,albedo,netrad,dpet)
 
-  if (abs(pet - pet0) < 0.01 .or. i > 100) exit
+  ! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
 
-  pet0 = pet
+  if (abs(dpet - pet0) < 0.01 .or. i > 100) exit
+
+  pet0 = dpet
 
   i = i + 1
 
@@ -213,7 +232,7 @@ met%dayl = dayl
 met%tdew = tdew
 met%rdirect = direct
 met%rdiffuse = diffuse
-met%pet = pet
+met%dpet = dpet
 
 end subroutine radpet
 
@@ -232,11 +251,11 @@ implicit none
 
 ! arguments
 
-real(dp),               intent(in)  :: lat    ! latitude (degrees)
-real(sp),               intent(in)  :: delta  ! solar declination (degrees)
-real(sp),               intent(in)  :: dayl   ! day length (hours)
-real(sp),               intent(in)  :: Ratm   ! relative atmospheric pressure
-type(airmasspars),      intent(out) :: air    ! airmass parameters
+real(dp),          intent(in)  :: lat    ! latitude (degrees)
+real(sp),          intent(in)  :: delta  ! solar declination (degrees)
+real(sp),          intent(in)  :: dayl   ! day length (hours)
+real(sp),          intent(in)  :: Ratm   ! relative atmospheric pressure
+type(airmasspars), intent(out) :: air    ! airmass parameters
 
 ! parameters
 
@@ -315,6 +334,8 @@ else
   cosdel = cos(rdelta)
 
   ! ------
+  
+  ! calculate the half-daylength
   
   if (dayl > mindayl) then
     t1 = 0.5 * dayl
@@ -531,8 +552,9 @@ end subroutine surf_sw
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine surf_lw(temp,cldf,dayl,lw_rad,tdew)
+real(sp) function surf_lw(tair,tdew,cldf,time)
 
+! calculate daytime net longwave radiation (kJ m-2 d-1)
 ! This code is based on the paper:
 ! A. Haxeltine and Prentice, I.C., BIOME3..., Glob. Biogeochem. Cycles, 10, 693-709
 ! With a new calculations of:
@@ -550,12 +572,10 @@ implicit none
 
 ! arguments
 
-real(sp), intent(in)  :: temp    ! surface air (2m) temperature (C)
+real(sp), intent(in)  :: tair    ! 2m air temperature integrated over the reference period (degC)
+real(sp), intent(in)  :: tdew    ! dewpoint temperature (degC)
 real(sp), intent(in)  :: cldf    ! cloud cover fraction 
-real(sp), intent(in)  :: dayl    ! daylength (h)
-
-real(sp), intent(out) :: lw_rad  ! daytime net longwave radiation (kJ m-2 d-1)
-real(sp), intent(out) :: tdew    ! dew point temperature (based on input temperature) (C)
+real(sp), intent(in)  :: time    ! reference period (h) (typically length of the day or night)
 
 ! parameters
 
@@ -571,9 +591,9 @@ real(sp), parameter :: cs = 1.5 ! shape parameter for the curve relating fractio
 
 ! local variables
 
-real(sp) :: Tk     ! surface air temperature (K)
-real(sp) :: Ts     ! ground surface temperature (K)
-real(sp) :: TdewK  ! dewpoint temperature (K)
+real(sp) :: tairK  ! surface air temperature (K)
+real(sp) :: tskin  ! ground surface (skin) temperature (K)
+real(sp) :: tdewK  ! dewpoint temperature (K)
 real(sp) :: D      ! dew point depression (K)
 real(sp) :: es     ! saturation vapor pressure
 
@@ -589,49 +609,41 @@ real(sp) :: sunf   ! bright sunshine duration fraction, n/N (fraction)
 
 sunf = 1. - cldf
 
-Tk = temp + Tfreeze
+tairK = tair + tfreeze
 
 f = 0.2 + 0.8 * sunf  ! Linacre Eqn. 7
 
 ! -------------------------------------------------
 ! calculate longwave radiation
 
-Ts = Tk ! approximation that mean daily surface temperature equals air temp.
+tskin = tairK ! approximation that over vegetated surfaces mean daily skin temperature equals air temp
 
 ! black body upwelling longwave (W m-2)  ! various sources e.g., Oleson et al.
 
-Ql_up = e * sb * Ts**4
+Ql_up = e * sb * tskin**4
 
 ! --
 ! Josey et al. (2003) formulation for downwelling longwave
 
-! To estimate dewpoint temperature we use the day's minimum temperature
-! this makes the asumption that there is a close correlation between Tmin and dewpoint
-! see, e.g., Glassy & Running, Ecological Applications, 1994
+tdewK = tdew + tfreeze
 
-es = 0.01 * esat(Tk) ! saturation vapor pressure (mbar)  
+D = tdewK - tairK
 
-TdewK = 34.07 + 4157. / log(2.1718e8 / es)  ! Josey et al., Eqn. 10
-
-D = TdewK - Tk
-
-Ql_dn = sb * (Tk + a*cldf**2 + b*cldf + c + 0.84 * (D + 4.01))**4  ! downwelling longwave (W m-2) Josey et al. Eqn. 14,J2
+Ql_dn = sb * (tairK + a*cldf**2 + b*cldf + c + 0.84 * (D + 4.01))**4  ! downwelling longwave (W m-2) Josey et al. Eqn. 14,J2
 
 Ql = Ql_up - (1. - al) * Ql_dn   ! Josey et al., Eqn 1
 
 ! ----
 
-lw_rad = 0.001 * 3600. * dayl * Ql  ! daytime net longwave (kJ m-2 d-1)
+surf_lw = 0.001 * 3600. * time * Ql  ! daytime net longwave (kJ m-2 d-1)
 
-tdew = TdewK - Tfreeze
-
-end subroutine surf_lw
+end function surf_lw
 
 ! ----------------------------------------------------------------------------------------------------------------
 
 subroutine netrad_pet(temp,sw_rad,lw_rad,albedo,netrad,pet)
 
-use parametersmod, only : sp,Tfreeze
+use parametersmod, only : sp,tfreeze
 
 implicit none
 
@@ -873,6 +885,87 @@ else
 end if
 
 end function F
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function dewpoint(tmin,tmax,dpet,pann)
+
+! Estimate dewpoint temperature
+! Based on Kimball, J. S., Running, S. W., & Nemani, R. (1997). 
+! An improved method for estimating surface humidity from daily minimum temperature. 
+! Agricultural and Forest Meteorology, 85(1), 87-98. doi:https://doi.org/10.1016/S0168-1923(96)02366-0
+
+use parametersmod, only : sp,tfreeze
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: tmin  ! daily minimum temperature (degC)
+real(sp), intent(in) :: tmax  ! daily maximum temperature (degC)
+real(sp), intent(in) :: dpet  ! daily evapotranspiration (mm)
+real(sp), intent(in) :: pann  ! total annual precipitation (mm)
+
+! local variables
+
+real(sp) :: tminK
+real(sp) :: tmaxK
+real(sp) :: EF
+real(sp) :: tdewK
+
+! ---
+
+tminK = tmin + tfreeze
+tmaxK = tmax + tfreeze
+
+EF = dpet / pann
+
+tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
+
+dewpoint = tdewK - tfreeze
+
+end function dewpoint
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function rhum(tair,tdew)
+
+! Estimate relative humidity from air temperature and dewpoint temperature
+! Based on Lawrence, M. G. (2005). The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: 
+! A Simple Conversion and Applications. 
+! Bulletin of the American Meteorological Society, 86(2), 225-234. doi:10.1175/bams-86-2-225
+
+use parametersmod, only : sp,tfreeze
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: tair  ! air temperature (degC)
+real(sp), intent(in)  :: tdew  ! dewpoint temperature (degC)
+
+! parameter
+
+real(sp), parameter :: Rw = 461.5  ! gas constant for water vapor (J K-1 kg-1)
+
+! local variables
+
+real(sp) :: tairK
+real(sp) :: tdewK
+real(sp) :: L       ! enthalpy of vaporization of water (J kg-1)
+
+! ------
+
+tairK = tair + tfreeze
+tdewK = tdew + tfreeze
+
+L = 1.91846e6 * (tairK / (tairK))**2  ! (J kg-1) Eqn. from Henderson-Sellers (1984)
+
+! tdewK = min(tdewK,tairK)  ! limit dewpoint temperature to air temperature
+
+rhum = 100. * exp(-L / (Rw * tairK * tdewK) * (tairK - tdewK)) ! eqn 12
+
+end function rhum
 
 ! ----------------------------------------------------------------------------------------------------------------
 

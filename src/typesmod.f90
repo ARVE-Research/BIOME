@@ -13,7 +13,7 @@ public :: terraintype
 public :: climatetype
 public :: soiltype
 public :: metvars_in
-public :: metvars_out
+public :: metvars_daily
 
 ! ---
 
@@ -47,6 +47,7 @@ type pixeltype
   real(dp) :: lat
   real(sp) :: Ratm ! relative atmospheric pressure
   real(sp) :: tcm  ! temperature of the coldest month
+  real(sp) :: Pann ! total annual precipitation
   real(sp) :: Pjj  ! precipitation equitability index
   ! logical :: valid
   ! integer, dimension(8) :: neighbors
@@ -119,7 +120,6 @@ end type solarpars
 ! ---
 
 type airmasspars
-  real(sp) :: Ratm    ! relative atmospheric pressure 1=sea level
   real(sp) :: mbar    ! daytime mean optical air mass (unitless, 1 at equatorial noon)
   real(sp) :: mo      ! air mass at cosine zenith angle maximum
   real(sp) :: mc      ! air mass at cosine zenith angle medium
@@ -153,7 +153,7 @@ end type metvars_in
 
 ! ---
 
-type metvars_out  ! structure for weather generator output (daily)
+type metvars_daily  ! structure for weather generator output (daily)
 
   ! basic output
 
@@ -174,18 +174,24 @@ type metvars_out  ! structure for weather generator output (daily)
   real(sp) :: rad0      ! top-of-atmosphere insolation (W m-2)
   real(sp) :: rdirect   ! surface downwelling radiation, direct beam component (kJ m-2 d-1)
   real(sp) :: rdiffuse  ! surface downwelling radiation, diffuse beam component (kJ m-2 d-1)
-  real(sp) :: pet       ! daytime potential evapotranspiration (mm d-1)
+  real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
-  ! diagnostic output
+  ! diagnostic output, uncomment this section as needed
 
-!   real(sp) :: wind_bias
-!   real(sp) :: wind_intercept_bias
-!   real(sp) :: tmin_mn
-!   real(sp) :: tmin_sd
-!   real(sp) :: wind_mn
-!   real(sp) :: wind_sd
+  ! real(sp) :: wind_bias
+  ! real(sp) :: wind_intercept_bias
+  ! real(sp) :: tmin_mn
+  ! real(sp) :: tmin_sd
+  ! real(sp) :: wind_mn
+  ! real(sp) :: wind_sd
 
-end type metvars_out
+end type metvars_daily
+
+type metvars_monthly
+
+  real(sp) :: mpet
+
+end type metvars_monthly
 
 ! ---
 

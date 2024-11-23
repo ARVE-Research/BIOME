@@ -211,15 +211,15 @@ use parametersmod, only : sp,dp,tfreeze
 use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma
 use statsmod,      only : gamma_cdf,gamma_pdf
 use utilitymod,    only : roundto
-use typesmod,      only : metvars_in,metvars_out
+use typesmod,      only : metvars_in,metvars_daily
 
 implicit none
 
 ! ---------------
 !arguments
 
-type(metvars_in),  intent(inout) :: met_in
-type(metvars_out), intent(out)   :: met_out
+type(metvars_in),    intent(inout) :: met_in
+type(metvars_daily), intent(out)   :: met_out
 
 ! ---------------
 !local variables

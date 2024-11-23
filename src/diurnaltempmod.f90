@@ -21,13 +21,13 @@ subroutine diurnaltemp(met)
 ! NB there is an error in this paper, eqn. 7a should have a sin after the alpha.
 
 use parametersmod, only : i4,sp,pi
-use typesmod,      only : metvars_out
+use typesmod,      only : metvars_daily
 
 implicit none
 
 ! arguments
 
-type(metvars_out), dimension(:), intent(inout) :: met
+type(metvars_daily), dimension(:), intent(inout) :: met
 
 ! parameter
 
@@ -45,10 +45,10 @@ real(sp) :: tmax    ! current day maximum temperature (degC)
 real(sp) :: tday    ! mean daytime temperature (degC)
 real(sp) :: tnight  ! mean nighttime temperature (degC)
 
-real(sp) :: dl0   ! length of the current day, adjusted (h)
-real(sp) :: dl1   ! length of the next day, adjusted (h)
-real(sp) :: hdl0  ! half day length, current day (h)
-real(sp) :: hdl1  ! half-day length, next day (h)
+real(sp) :: dl0     ! length of the current day, adjusted (h)
+real(sp) :: dl1     ! length of the next day, adjusted (h)
+real(sp) :: hdl0    ! half day length, current day (h)
+real(sp) :: hdl1    ! half-day length, next day (h)
 
 real(sp) :: sunrise0  ! time of sunrise, current day (h)
 real(sp) :: sunrise1  ! time of sunrise, next day (h)
@@ -63,18 +63,11 @@ real(sp) :: hni   ! length of the night (h)
 real(sp) :: morn  ! time from sunrise to peakT (h)
 
 ! integrated temperature over intervals (degC)
+
 real(sp) :: tam   ! sunrise to peakT
 real(sp) :: tpm   ! peakT to sunset
 real(sp) :: ti    ! sunset to midnight
 real(sp) :: ti1   ! midnight to sunrise
-
-
-! integer  :: sunrise
-! integer  :: sunset
-! integer  :: sunrise_n
-! integer  :: dayhour
-! integer  :: nighthour
-! integer  :: dayhour_n
 
 ! -------------------------
 ! to separate daytime and nighttime: (Leo Lai May 2019)
@@ -158,40 +151,5 @@ met(1)%tnight = tnight
 end subroutine diurnaltemp
 
 ! -----------------------------------------------------------
-
-subroutine humidity(tmean,tdew,rhum)
-
-! Calculate relative humidity from dew point temperature
-! From Lawrence (2005) The relationship between relative humidity and the dewpoint temperature. A. MetSoc (https://doi.org/10.1175/BAMS-86-2-225)
-! Equation (11)
-
-use parametersmod, only : sp,dp
-
-implicit none
-
-real(sp), intent(in)  :: tmean
-real(sp), intent(in)  :: tdew
-real(sp), intent(out) :: rhum
-
-real(sp) :: tmean_K
-real(sp) :: tdew_K
-
-real(sp), parameter :: L  = 2257000
-real(sp), parameter :: Rw = 461.5
-
-!------
-
-tmean_K = tmean + 273.15
-tdew_K  = tdew + 273.15
-
-!------
-
-rhum = 100. * exp(((1. - (tmean_K / tdew_K)) * (L / Rw)) / tmean_K)
-
-if (rhum > 100.) rhum = 100.    ! When temp is lower than dew point
-
-
-end subroutine humidity
-
 
 end module diurnaltempmod

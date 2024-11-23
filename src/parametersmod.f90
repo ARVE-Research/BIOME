@@ -15,7 +15,8 @@ integer, parameter :: stdin  = input_unit
 integer, parameter :: stdout = output_unit
 integer, parameter :: stderr = error_unit
 
-real(sp), parameter :: rmissing = -9999.
+integer(i2), parameter :: imissing = -32768
+real(sp),    parameter :: rmissing =  -9999.
 
 real(sp), parameter :: hsp = huge(1._sp)    ! largest positive 4-byte real
 

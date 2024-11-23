@@ -10,7 +10,7 @@ subroutine genoutputfile(jobfile,outfile,gridinfo,ofid)
 
 use netcdf
 use errormod,      only : ncstat,netcdf_err
-use parametersmod, only : i2,dp
+use parametersmod, only : i2,dp,imissing,rmissing
 use typesmod,      only : gridinfotype
 
 implicit none
@@ -19,8 +19,6 @@ character(*),       intent(in)  :: jobfile
 character(*),       intent(in)  :: outfile
 type(gridinfotype), intent(in)  :: gridinfo
 integer,            intent(out) :: ofid
-
-integer(i2), parameter :: missing = -32768
 
 integer, dimension(4) :: dimids
 integer, dimension(4) :: chunks
@@ -239,10 +237,27 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 ncstat = nf90_put_att(ofid,varid,'units','biome')
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'_FillValue',missing)
+ncstat = nf90_put_att(ofid,varid,'_FillValue',imissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'missing_value',missing)
+ncstat = nf90_put_att(ofid,varid,'missing_value',imissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+
+ncstat = nf90_def_var(ofid,'mpet',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','potential evapotranspiration')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','mm')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
@@ -251,6 +266,88 @@ ncstat = nf90_enddef(ofid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 end subroutine genoutputfile
+
+! -----------------------------------------------------
+
+subroutine writereal3d(ofid,gridinfo,pixel,varname,ovar)
+
+use parametersmod, only : sp,rmissing
+use typesmod,      only : gridinfotype,pixeltype,metvars_monthly
+use netcdf
+use errormod,      only : ncstat,netcdf_err
+
+implicit none
+
+! arguments
+
+integer,                       intent(in) :: ofid
+type(gridinfotype),            intent(in) :: gridinfo
+type(pixeltype), dimension(:), intent(in) :: pixel
+character(*),                  intent(in) :: varname
+real(sp), dimension(:,:),      intent(in) :: ovar
+
+! local variables
+
+integer :: cntx
+integer :: cnty
+
+integer :: n
+integer :: i
+integer :: x
+integer :: y
+
+integer :: varlen
+integer :: varid
+
+real(sp), allocatable, dimension(:,:,:) :: mvar
+
+! ----
+
+varlen = size(ovar,dim=2)
+
+cntx = gridinfo%cntx
+cnty = gridinfo%cnty
+
+allocate(mvar(cntx,cnty,varlen))
+
+mvar = rmissing
+
+n = size(pixel)
+
+do i = 1,n
+
+  x = pixel(i)%x
+  y = pixel(i)%y
+  
+  mvar(x,y,:) = ovar(i,:)
+
+end do
+
+ncstat = nf90_inq_varid(ofid,varname,varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,mvar)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end subroutine writereal3d
+
+! -----------------------------------------------------
+
+subroutine closeoutput(ofid)
+
+use netcdf
+use errormod, only : ncstat,netcdf_err
+
+implicit none
+
+integer, intent(in) :: ofid
+
+! ---
+
+ncstat = nf90_close(ofid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end subroutine closeoutput
 
 ! -----------------------------------------------------
 

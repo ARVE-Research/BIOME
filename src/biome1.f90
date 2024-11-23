@@ -4,7 +4,7 @@ use parametersmod
 use coordsmod
 use readdatamod
 use typesmod  ! going to use all of the types, but should specify
-use netcdfoutputmod
+use netcdfoutputmod, only : genoutputfile,writereal3d,closeoutput
 use utilitymod,      only : bp2ce,leapyear
 use newsplinemod
 use orbitmod,        only : getorbitpars
@@ -37,7 +37,9 @@ type(climatetype), allocatable, dimension(:,:)   :: daily
 
 type(pixeltype),   allocatable, dimension(:) :: pixel
 type(metvars_in),  allocatable, dimension(:) :: met_in
-type(metvars_out), allocatable, dimension(:,:) :: met_out
+type(metvars_daily), allocatable, dimension(:,:) :: dmet
+
+type(metvars_monthly), allocatable, dimension(:,:) :: mmet
 
 type(solarpars) :: solar
 
@@ -47,6 +49,7 @@ integer :: x
 integer :: y
 integer :: m
 integer :: i
+integer :: j
 
 integer :: doy
 
@@ -156,6 +159,8 @@ write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
 allocate(pixel(ncells))
 
+allocate(mmet(ncells,12))  ! monthly output
+
 i = 1
 
 do y = 1,cnty
@@ -174,6 +179,8 @@ do y = 1,cnty
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
     
     ! precipitation equitability index, used in airmass calculations for surface radiation
+    
+    pixel(i)%Pann = sum(climate(x,y,:)%pre)
 
     pixel(i)%Pjj = Pjj(climate(x,y,:)%tmp,climate(x,y,:)%pre) 
     
@@ -220,7 +227,7 @@ do i = 1,ncells
 end do
 
 allocate(met_in(ncells))
-allocate(met_out(ncells,2))  ! for the current and next day
+allocate(dmet(ncells,2))  ! for the current and next day
 
 ! initalize the random number generator
 
@@ -243,15 +250,15 @@ do i = 1,4
   met_in%resid(i) = 0.
 end do
 
-met_out%tmin = 0.
-met_out%tmax = 0.
-met_out%prec = 0.
-met_out%cldf = 0.
-met_out%wind = 0.
-met_out%rad0 = 0.
-met_out%dayl = 0.
-met_out%tday = 0.
-met_out%tnight= 0.
+dmet%tmin = 0.
+dmet%tmax = 0.
+dmet%prec = 0.
+dmet%cldf = 0.
+dmet%wind = 0.
+dmet%rad0 = 0.
+dmet%dayl = 0.
+dmet%tday = 0.
+dmet%tnight= 0.
 
 ! ---------------------------------
 ! initialization daily loop
@@ -291,30 +298,46 @@ do m = 1,nmos
 
       ! generate daily meteorology for all valid cells for one day
 
-      call weathergen(met_in(i),met_out(i,2))
+      call weathergen(met_in(i),dmet(i,2))
+      
+      ! write(0,*)'WG:',dmet(i,2)%tmin,dmet(i,2)%tmax
 
       ! calculate top-of-the-atmosphere insolation and daylength
       
       call insol(slon,orbit,latr,solar)
       
-      met_out(i,2)%rad0 = solar%rad0
-      met_out(i,2)%dayl = solar%dayl
+      dmet(i,2)%rad0 = solar%rad0
+      dmet(i,2)%dayl = solar%dayl
 
-      ! met_out(:,1) = current day values, met_out(:,2) = next day day values
+      ! dmet(:,1) = current day values, dmet(:,2) = next day day values
       
-      met_out(i,:) = eoshift(met_out(i,:),-1,met_out(i,2))
+      dmet(i,:) = eoshift(dmet(i,:),-1,dmet(i,2))
       
       ! calculate integrated day- and night-time temperature
 
-      call diurnaltemp(met_out(i,:))
+      call diurnaltemp(dmet(i,:))
+      
+      ! estimate dewpoint temperature 
       
       albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
-
-      ! calculate surface solar radiation and potential evapotranspiration
-
-      call radpet(pixel(i),solar,albedo,met_out(i,1))
       
-      write(0,10)m,d,met_out(i,1)
+!       ! start day-night loop
+!       
+!       do j = 1,2
+! 
+!         ! calculate downwelling shortwave radiation, will generally be zero at night
+!         
+!         ! calculate longwave radiation
+!         
+!         ! calculate potential evapotranspiration
+!         
+!         surface radiation budget and potential evapotranspiration
+  
+        call radpet(pixel(i),solar,albedo,dmet(i,1))
+        
+        ! write(0,10)m,d,dmet(i,1)
+
+!       end do  ! day-night loop
 
     end do ! cells
     
@@ -327,6 +350,8 @@ end do     ! month
 ! computation daily loop
 
 write(0,*)'start computation daily loop'
+
+mmet%mpet = 0.
 
 doy = 1
 
@@ -356,7 +381,7 @@ do m = 1,nmos
 
       ! generate daily meteorology for all valid cells for one day
   
-      call weathergen(met_in(i),met_out(i,1))
+      call weathergen(met_in(i),dmet(i,1))
       
       ! calculate daylength and insolation
       
@@ -364,24 +389,27 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      met_out(i,2)%rad0 = solar%rad0
-      met_out(i,2)%dayl = solar%dayl
+      dmet(i,2)%rad0 = solar%rad0
+      dmet(i,2)%dayl = solar%dayl
       
-      ! met_out(:,1) = current day values, met_out(:,2) = next day day values
+      ! dmet(:,1) = current day values, dmet(:,2) = next day day values
       
-      met_out(i,:) = eoshift(met_out(i,:),-1,met_out(i,2))
+      dmet(i,:) = eoshift(dmet(i,:),-1,dmet(i,2))
       
       ! calculate integrated day- and night-time temperature
 
-      call diurnaltemp(met_out(i,:))
+      call diurnaltemp(dmet(i,:))
       
       albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
 
       ! calculate surface solar radiation and potential evapotranspiration
 
-      call radpet(pixel(i),solar,albedo,met_out(i,1))
+      call radpet(pixel(i),solar,albedo,dmet(i,1))
       
-      write(0,10)m,d,met_out(i,1)
+      ! write(0,10)m,d,dmet(i,1)
+      
+      ! monthly sum of PET
+      mmet(i,m)%mpet = mmet(i,m)%mpet + dmet(i,1)%dpet
 
     end do ! cells
     
@@ -392,5 +420,14 @@ end do     ! month
 
 ! ---------------------------------
 ! write model output
+
+call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
+
+! ---------------------------------
+
+call closeoutput(ofid)
+
+! ---------------------------------
+! finish
 
 end program biome1
