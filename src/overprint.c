@@ -15,6 +15,6 @@
   void overprint_(char *text)
 #endif
 {
-	fprintf(stderr,"%40s\r",text);
+	fprintf(stderr,"%s\r",text);
 	fflush(stderr);
 }
