@@ -40,7 +40,11 @@ AC_FC_SRCEXT(f90)
 
 FC_REALNAME=$NETCDF_FC
 
-# $($NETCDF_FC -show | awk '{print $1}')
+if test "x$FC_REALNAME" = xmpifort ; then
+
+  $($NETCDF_FC -show | awk '{print $1}')
+
+fi
 
 # set the linker flags
 
