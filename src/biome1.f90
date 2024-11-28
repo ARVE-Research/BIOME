@@ -5,7 +5,7 @@ use coordsmod
 use readdatamod
 use typesmod  ! going to use all of the types, but should specify
 use netcdfoutputmod, only : genoutputfile,writereal3d,closeoutput
-use utilitymod,      only : bp2ce,leapyear
+use utilitymod,      only : bp2ce,leapyear,overprint
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
@@ -77,7 +77,7 @@ real(dp) :: latd  ! geodesic latitude (degrees)
 real(sp) :: albedo
 ! real(sp) :: Ratm   ! relative atmospheric pressure
 
-character(100) :: status_line
+character(40) :: status_line
 
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile,maxmem
 

@@ -1,7 +1,6 @@
 bin_PROGRAMS = biome1
 
 biome1_SOURCES =       \
-  overprint.c          \
   parametersmod.f90    \
   errormod.f90         \
   utilitymod.f90       \
