@@ -61,9 +61,7 @@ integer :: ofid
 integer :: ndy
 integer, dimension(nmos) :: ndm
 
-
-type(calendarstype), target  :: calendar
-type(calendartype),  pointer :: cal
+type(calendartype) :: cal
 
 integer :: d
 
@@ -78,6 +76,8 @@ real(dp) :: latd  ! geodesic latitude (degrees)
 
 real(sp) :: albedo
 ! real(sp) :: Ratm   ! relative atmospheric pressure
+
+character(100) :: status_line
 
 namelist /joboptions/ gridinfo,terrainfile,climatefile,soilfile,maxmem
 
@@ -95,13 +95,7 @@ read(10,nml=joboptions)
 
 yrbp = -73
 
-call initcalendar(yrbp,orbit,calendar)
-
-if (leapyear(bp2ce(yrbp))) then
-  cal => calendar%leapyr
-else
-  cal => calendar%noleap
-end if
+call initcalendar(yrbp,orbit,cal)
 
 ndy = cal%ndyr
 ndm = cal%ndmi
@@ -212,7 +206,7 @@ allocate(daily(ncells,ndy))
 
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
 
-write(0,*)'go newspline'
+write(0,*)'calculate smoothed meteorology'
 
 do i = 1,ncells
 
@@ -231,7 +225,7 @@ allocate(dmet(ncells,2))  ! for the current and next day
 
 ! initalize the random number generator
 
-write(0,*)'go random seed'
+write(0,*)'seed random number generator'
 
 do i = 1,ncells
   call ran_seed(-104576,met_in(i)%rndst)
@@ -271,6 +265,9 @@ doy = 1  ! day of year counter
 
 do m = 1,nmos
   do d = 1,ndm(m)
+  
+    write(status_line,'(a,i0,a,i0)')' working on ',m,' ',d
+    call overprint(status_line)
     
     ! calculate true solar longitude (for daylength)
     ! only need to do this once per day, not for each cell
@@ -340,7 +337,7 @@ do m = 1,nmos
 !       end do  ! day-night loop
 
     end do ! cells
-    
+
     doy = doy + 1
     
   end do   ! days in the month
@@ -349,6 +346,7 @@ end do     ! month
 ! ---------------------------------
 ! computation daily loop
 
+write(0,*)
 write(0,*)'start computation daily loop'
 
 mmet%mpet = 0.
@@ -357,6 +355,9 @@ doy = 1
 
 do m = 1,nmos
   do d = 1,ndm(m)
+
+    write(status_line,'(a,i0,a,i0)')' working on ',m,' ',d
+    call overprint(status_line)
 
     ! calculate true solar longitude for daylength, 
     ! only need to do this once per day, not for each cell
@@ -417,6 +418,8 @@ do m = 1,nmos
     
   end do   ! days in the month
 end do     ! month
+
+write(0,*)
 
 ! ---------------------------------
 ! write model output

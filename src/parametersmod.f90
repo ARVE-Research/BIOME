@@ -32,7 +32,7 @@ integer,  parameter :: nmos = 12   ! number of months in a year
 
 integer, parameter :: nd_360 = 360         ! number of days in a 360-day year
 integer, parameter :: daysinmonth360 = 30  ! number of days in a month of a 360-day year
-integer, parameter :: nd_365 = 365         ! number of days in a 365-day "noleaps" year
+integer, parameter :: nd_365 = 365         ! number of days in a 365-day "no-leap" year
 integer, parameter :: nd_366 = 366         ! number of days in a 366-day leap year
 
 ! other calendar-related variables

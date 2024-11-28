@@ -627,6 +627,8 @@ do i=1,4
   end if
 end do
 
+! write(0,*)pday,dm
+
 end subroutine temp_sd
 
 ! ---------------------------------------------------------

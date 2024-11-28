@@ -1,5 +1,8 @@
 &joboptions
   climatefile     = '/Users/jkaplan/nosync/inputdata_northam/NAclimate.nc'
-  soilfile        = '/Users/jkaplan/nosync/inputdata_northam/NAsoils.nc'
+  soilfile        = '/Users/jkaplan//Documents/science_projects/soils/makesoil/NA5km/soils.nc'
   gridinfo%isproj = .true.
 /
+
+
+! California -2117500/-1337500/-2012500/-372500

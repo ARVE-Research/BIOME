@@ -18,22 +18,22 @@ subroutine initcalendar(yrbp,orbit,cal)
 
 ! given a year BP, calculate the orbital parameters and the month lengths of a standard and leap year
 
-use parametersmod
-use orbitmod
-use typesmod
+use parametersmod, only : dp,nmos,present_mon_noleap,present_mon_leap,veqday_365,veqday_366
+use orbitmod,      only : getorbitpars
+use typesmod,      only : orbitpars,calendartype,calendarstype
+use utilitymod,    only : bp2ce,leapyear
 
 implicit none
 
 ! arguments
 
-integer,             intent(in)  :: yrbp
-type(orbitpars),     intent(out) :: orbit
-type(calendarstype), intent(out) :: cal
-
-! type(calendartype),  intent(out) :: noleap
-! type(calendartype),  intent(out) :: leapyr
+integer,             intent(in)  :: yrbp   ! year before present (1950 CE)
+type(orbitpars),     intent(out) :: orbit  ! orbital parameters
+type(calendartype),  intent(out) :: cal    ! calendar parameters for selected year
 
 ! local variables
+
+type(calendarstype) :: calendar  ! calendar parameters for leap and non-leap years
 
 integer :: m
 
@@ -48,69 +48,66 @@ real(dp) :: yrlen1
 ! ----
 ! initialize the reference month lengths for ~0ka for 365- and 366-day years
 
-call getorbitpars(0,orbit)  ! estimate orbital parameters for 0ka
+call getorbitpars(0,orbit)  ! orbital parameters for ~0ka
 
 ! get number of days per month (real number) for 0ka 365 and 366-day years
 
 call getmonlen(orbit,365,ndm0noleap)
 call getmonlen(orbit,366,ndm0leapyr)
 
+! ----
 ! initialize the orbital parameters for the selected run year
 
-call getorbitpars(yrbp,orbit)  ! estimate orbital parameters for 0ka
+call getorbitpars(yrbp,orbit)
 
 ! calculate real month lengths for the target year
 
 call getmonlen(orbit,365,ndm1noleap)
 call getmonlen(orbit,366,ndm1leapyr)
 
+! ----
 ! calculate real month lengths for the target year by normalizing to 0ka
 
-cal%noleap%ndmr = ndm1noleap / ndm0noleap * present_mon_noleap
+calendar%noleap%ndmr = ndm1noleap / ndm0noleap * present_mon_noleap
 
-cal%leapyr%ndmr = ndm1leapyr / ndm0leapyr * present_mon_leap
+calendar%leapyr%ndmr = ndm1leapyr / ndm0leapyr * present_mon_leap
 
-! --
+! ----
 ! correct for total year length: standard year
 
 yrlen0 = 365._dp
-yrlen1 = sum(cal%noleap%ndmr)
+yrlen1 = sum(calendar%noleap%ndmr)
 
-cal%noleap%ndmr = cal%noleap%ndmr / (yrlen1 / yrlen0)
+calendar%noleap%ndmr = calendar%noleap%ndmr / (yrlen1 / yrlen0)
 
-cal%noleap%ndmi = nint(cal%noleap%ndmr)
+calendar%noleap%ndmi = nint(calendar%noleap%ndmr)
 
-cal%noleap%ndyr = nint(yrlen0)
+calendar%noleap%ndyr = nint(yrlen0)
 
-cal%noleap%veqday = veqday_365
+calendar%noleap%veqday = veqday_365
 
-! --
+! ----
 ! correct for total year length: leap year
 
 yrlen0 = 366._dp
-yrlen1 = sum(cal%leapyr%ndmr)
+yrlen1 = sum(calendar%leapyr%ndmr)
 
-cal%leapyr%ndmr = cal%leapyr%ndmr / (yrlen1 / yrlen0)
+calendar%leapyr%ndmr = calendar%leapyr%ndmr / (yrlen1 / yrlen0)
 
-cal%leapyr%ndmi = nint(cal%leapyr%ndmr)
+calendar%leapyr%ndmi = nint(calendar%leapyr%ndmr)
 
-cal%leapyr%ndyr = nint(yrlen0)
+calendar%leapyr%ndyr = nint(yrlen0)
 
-cal%leapyr%veqday = veqday_366
+calendar%leapyr%veqday = veqday_366
 
-! --
+! ----
+! select the output year
 
-! do m = 1,nmos
-!   write(0,*)m,ndm0noleap(m),ndm1noleap(m),cal%noleap%ndmr(m),cal%noleap%ndmi(m)
-! end do
-! 
-! write(0,*)
-! 
-! do m = 1,nmos
-!   write(0,*)m,ndm0leapyr(m),ndm1leapyr(m),cal%leapyr%ndmr(m),cal%leapyr%ndmi(m)
-! end do
-! 
-! write(0,*)sum(cal%noleap%ndmi),sum(cal%leapyr%ndmi)
+if (leapyear(bp2ce(yrbp))) then
+  cal = calendar%leapyr
+else
+  cal = calendar%noleap
+end if
 
 end subroutine initcalendar
 
