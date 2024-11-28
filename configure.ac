@@ -35,14 +35,15 @@ AC_LANG([Fortran])
 AC_FC_SRCEXT(f90)
 
 # ----
-
 # get the real name of the compiler
 
-FC_REALNAME=$NETCDF_FC
+if test "x$NETCDF_FC" = xmpifort ; then
 
-if test "x$FC_REALNAME" = xmpifort ; then
+  FC_REALNAME=$($NETCDF_FC -show | awk '{print $1}')
 
-  $($NETCDF_FC -show | awk '{print $1}')
+else
+
+  FC_REALNAME=$NETCDF_FC
 
 fi
 
