@@ -599,6 +599,8 @@ do i=1,4
 
     else
 
+      write(*,*)'A',i,dm%tmin_mn
+
       dm%tmin_sd = sum(tmin_sd_d(i,:) * dm%tmin_mn**exponents)
 
     end if
@@ -607,6 +609,9 @@ do i=1,4
 
   end if
 end do
+
+write(*,*)'B',i,dm%tmin_sd
+
 
 do i=1,4
 
@@ -626,8 +631,6 @@ do i=1,4
 
   end if
 end do
-
-! write(0,*)pday,dm
 
 end subroutine temp_sd
 
