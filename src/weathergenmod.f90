@@ -580,6 +580,9 @@ subroutine temp_sd(pday,dm)
 
 ! calculate the standard deviation of tmin and tmax depending on the input value and precipitation state
 
+use parametersmod, only : stdout
+use utilitymod,    only : roundto
+
 implicit none
 
 logical,          intent(in)    :: pday    ! precipitation status (mm/day)
@@ -588,6 +591,12 @@ type(daymetvars), intent(inout) :: dm
 integer :: i
 
 ! --------------------
+! Note: input values for temperature that are very close to zero can cause underflow in the 
+! polynomial calculations in this routine. We therefore round the input values to the nearest 0.001.
+! Also, NB Fortran sets the value of 0**0 to 1 (November 2024)
+
+dm%tmin_mn = roundto(dm%tmin_mn,3)
+dm%tmax_mn = roundto(dm%tmax_mn,3)
 
 do i=1,4
 
@@ -599,8 +608,6 @@ do i=1,4
 
     else
 
-      write(*,*)'A',i,dm%tmin_mn
-
       dm%tmin_sd = sum(tmin_sd_d(i,:) * dm%tmin_mn**exponents)
 
     end if
@@ -609,9 +616,6 @@ do i=1,4
 
   end if
 end do
-
-write(*,*)'B',i,dm%tmin_sd
-
 
 do i=1,4
 
