@@ -352,6 +352,7 @@ write(0,*)
 write(0,*)'start computation daily loop'
 
 mmet%mpet = 0.
+mmet%alpha = 0.
 
 doy = 1
 
@@ -425,11 +426,12 @@ do m = 1,nmos
   end do   ! days in the month
 end do     ! month
 
-stop
 write(0,*)
 
 ! ---------------------------------
 ! write model output
+
+write(0,*)'writing'
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)

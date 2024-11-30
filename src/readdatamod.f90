@@ -435,8 +435,6 @@ real(sp), dimension(2) :: actual_range
 
 ! ----
 
-write(0,*)'reading',varname
-
 srtx = gridinfo%srtx
 cntx = gridinfo%cntx
 srty = gridinfo%srty

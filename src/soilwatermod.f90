@@ -105,7 +105,7 @@ real(sp) :: demand  ! water demand (mm)
 
 Emd = etmax * dmet%dayl
 
-if (soilw%whc > 0.) then
+if (soilw%whc > 0. .and. soilw%w > 0.) then
   supply = Emd * soilw%w / soilw%whc  ! min(Emd,soilw%w)  ! alternative formulation
 else
   supply = 0.
