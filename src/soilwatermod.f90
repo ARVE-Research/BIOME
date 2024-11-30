@@ -93,7 +93,7 @@ type(soilwatertype), intent(inout) :: soilw
 
 !parameters
 
-real(sp), parameter :: etmax = 1.  !maximum equilibrium evapotranspiration rate (mm h-1)
+real(sp), parameter :: etmax = 1.  ! maximum equilibrium evapotranspiration rate (mm h-1)
 
 !local variables
 
@@ -114,6 +114,10 @@ end if
 demand = dmet%dpet
 
 dmet%aet = min(supply,demand)
+
+! zero out low values to avoid underflow
+
+if (soilw%w < 1.e-5) soilw%w = 0.
 
 soilw%w = min(soilw%w + (dmet%prec - dmet%aet),soilw%whc)
 
