@@ -3,7 +3,7 @@ program biome1
 use parametersmod
 use coordsmod
 use readdatamod
-use typesmod  ! going to use all of the types, but should specify
+use typesmod         ! going to use all of the types, but should specify
 use netcdfoutputmod, only : genoutputfile,writereal3d,closeoutput
 use utilitymod,      only : bp2ce,leapyear,overprint
 use newsplinemod
@@ -15,6 +15,7 @@ use calendarmod
 use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
 use radiationmod,    only : initairmass,elev_corr,radpet,Pjj
+use soilwatermod,    only : calcwhc,soilwater
 
 implicit none
 
@@ -28,20 +29,21 @@ character(60) :: coordstring
 
 type(gridinfotype) :: gridinfo
 type(orbitpars)    :: orbit
+type(solarpars)    :: solar
+type(calendartype) :: cal
 
-type(coordstype),  allocatable, dimension(:,:)   :: coords
-type(terraintype), allocatable, dimension(:,:)   :: terrain
-type(climatetype), allocatable, dimension(:,:,:) :: climate
-type(soiltype),    allocatable, dimension(:,:,:) :: soil
-type(climatetype), allocatable, dimension(:,:)   :: daily
+type(soilcoordstype),  allocatable, dimension(:)     :: soilcoords
+type(pixeltype),       allocatable, dimension(:)     :: pixel
+type(metvars_in),      allocatable, dimension(:)     :: met_in
+type(coordstype),      allocatable, dimension(:,:)   :: coords
+type(terraintype),     allocatable, dimension(:,:)   :: terrain
+type(climatetype),     allocatable, dimension(:,:)   :: daily
+type(soilwatertype),   allocatable, dimension(:)     :: soilw
+type(metvars_daily),   allocatable, dimension(:,:)   :: dmet
+type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
+type(climatetype),     allocatable, dimension(:,:,:) :: climate
+type(soiltype),        allocatable, dimension(:,:,:) :: soil
 
-type(pixeltype),   allocatable, dimension(:) :: pixel
-type(metvars_in),  allocatable, dimension(:) :: met_in
-type(metvars_daily), allocatable, dimension(:,:) :: dmet
-
-type(metvars_monthly), allocatable, dimension(:,:) :: mmet
-
-type(solarpars) :: solar
 
 integer :: ncells
 
@@ -61,8 +63,6 @@ integer :: ofid
 integer :: ndy
 integer, dimension(nmos) :: ndm
 
-type(calendartype) :: cal
-
 integer :: d
 
 integer(i8) :: memreq
@@ -75,7 +75,6 @@ real(dp) :: latr  ! geodesic latitude (radians)
 real(dp) :: latd  ! geodesic latitude (degrees)
 
 real(sp) :: albedo
-! real(sp) :: Ratm   ! relative atmospheric pressure
 
 character(40) :: status_line
 
@@ -120,6 +119,7 @@ write(0,*)'allocate rectangular arrays',cntx,cnty
 allocate(coords(cntx,cnty))
 allocate(terrain(cntx,cnty))
 allocate(climate(cntx,cnty,nmos))
+allocate(soilcoords(6))
 allocate(soil(cntx,cnty,6))
 
 ! ---------------------------------
@@ -133,7 +133,7 @@ call readterrain(climatefile,gridinfo,terrain)
 
 call readclimate(climatefile,gridinfo,climate)
 
-call readsoil(soilfile,gridinfo,soil)
+call readsoil(soilfile,gridinfo,terrain,soilcoords,soil)
 
 ! ---------------------------------
 ! generate the output file
@@ -204,6 +204,8 @@ end if
 
 allocate(daily(ncells,ndy))
 
+allocate(soilw(ncells))
+
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
 
 write(0,*)'calculate smoothed meteorology'
@@ -217,7 +219,11 @@ do i = 1,ncells
   call newspline(climate(x,y,:)%dtr,ndm,[climate(x,y,nmos)%dtr,climate(x,y,1)%dtr],daily(i,:)%dtr)
   call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
   call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
-    
+  
+  ! calculate the column-integrated soil water holding capacity
+  
+  call calcwhc(terrain(x,y),soilcoords,soil(x,y,:),soilw(i))
+
 end do
 
 allocate(met_in(ncells))
@@ -254,10 +260,14 @@ dmet%dayl = 0.
 dmet%tday = 0.
 dmet%tnight= 0.
 
+soilw%w = soilw%whc
+
+! write(0,*)'initial soilw%w',soilw%w
+
 ! ---------------------------------
 ! initialization daily loop
 
-10 format(2i4,f8.3,f6.1,2f7.1,f7.3,f7.1,3f7.1,2f7.1,f7.1,2f10.1,f7.1)
+! 10 format(2i4,f8.3,f6.1,2f7.1,f7.3,f7.1,3f7.1,2f7.1,f7.1,2f10.1,f7.1)
 
 write(0,*)'start initialization daily loop'
 
@@ -283,6 +293,8 @@ do m = 1,nmos
       
       latd = coords(x,y)%geolat
       latr = latd * pir
+      
+      ! variable initializations
 
       met_in(i)%prec = climate(x,y,m)%pre
       met_in(i)%wetf = climate(x,y,m)%wet
@@ -318,23 +330,13 @@ do m = 1,nmos
       
       albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
       
-!       ! start day-night loop
-!       
-!       do j = 1,2
-! 
-!         ! calculate downwelling shortwave radiation, will generally be zero at night
-!         
-!         ! calculate longwave radiation
-!         
-!         ! calculate potential evapotranspiration
-!         
-!         surface radiation budget and potential evapotranspiration
+      ! surface radiation budget and potential evapotranspiration
   
-        call radpet(pixel(i),solar,albedo,dmet(i,1))
-        
-        ! write(0,10)m,d,dmet(i,1)
-
-!       end do  ! day-night loop
+      call radpet(pixel(i),solar,albedo,dmet(i,1))
+      
+      ! soil water balance, including actual evapotranspiration and alpha
+      
+      call soilwater(dmet(i,1),soilw(i))
 
     end do ! cells
 
@@ -406,11 +408,15 @@ do m = 1,nmos
       ! calculate surface solar radiation and potential evapotranspiration
 
       call radpet(pixel(i),solar,albedo,dmet(i,1))
+     
+      ! soil water balance, including actual evapotranspiration and alpha
+
+      call soilwater(dmet(i,1),soilw(i))
       
-      ! write(0,10)m,d,dmet(i,1)
-      
-      ! monthly sum of PET
-      mmet(i,m)%mpet = mmet(i,m)%mpet + dmet(i,1)%dpet
+      ! monthly summaries
+
+      mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i,1)%dpet
+      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i,1)%alpha
 
     end do ! cells
     
@@ -419,12 +425,14 @@ do m = 1,nmos
   end do   ! days in the month
 end do     ! month
 
+stop
 write(0,*)
 
 ! ---------------------------------
 ! write model output
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
+call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
 
 ! ---------------------------------
 

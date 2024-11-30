@@ -11,6 +11,11 @@ public  :: readsoil
 private :: getvar_i2
 private :: getvar_sp
 
+interface getvar_sp
+  module procedure getvar_sp_2d
+  module procedure getvar_sp_3d
+end interface getvar_sp
+
 contains
 
 ! -----------------------------------------------------
@@ -201,29 +206,66 @@ end subroutine readclimate
 
 ! -----------------------------------------------------
 
-subroutine readsoil(soilfile,gridinfo,soil)
+subroutine readsoil(soilfile,gridinfo,terrain,soilcoords,soil)
 
 use netcdf
 use errormod,  only : ncstat,netcdf_err
-use typesmod,  only : gridinfotype,soiltype
+use typesmod,  only : gridinfotype,soiltype,soilcoordstype,terraintype
 
 implicit none
 
 ! arguments
 
-character(*),                     intent(in)  :: soilfile
-type(gridinfotype),               intent(in)  :: gridinfo
-type(soiltype), dimension(:,:,:), intent(out) :: soil
+character(*),                           intent(in)    :: soilfile
+type(gridinfotype),                     intent(in)    :: gridinfo
+type(soilcoordstype), dimension(:),     intent(out)   :: soilcoords
+type(terraintype),    dimension(:,:),   intent(inout) :: terrain
+type(soiltype),       dimension(:,:,:), intent(out)   :: soil
 
 ! local variables
 
 integer :: ncid
+integer :: varid
+
+integer :: l
+integer :: nl
+
+real(sp), dimension(2,size(soilcoords)) :: layer_bnds
 
 ! -----
+
+nl = size(soilcoords)
 
 ncstat = nf90_open(soilfile,nf90_nowrite,ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
+! ---
+
+ncstat = nf90_inq_varid(ncid,'depth',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid,varid,soilcoords%zpos)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_inq_varid(ncid,'dz',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid,varid,soilcoords%dz)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_inq_varid(ncid,'layer_bnds',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid,varid,layer_bnds)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+do l = 1,nl
+  soilcoords(l)%bnds = layer_bnds(:,l)
+end do
+
+! ---
+
+call getvar_sp(ncid,'thickness',gridinfo,terrain%thickness)
 call getvar_sp(ncid,'Tsat',gridinfo,soil%Tsat)
 call getvar_sp(ncid,'Ksat',gridinfo,soil%Ksat)
 call getvar_sp(ncid,'whc',gridinfo,soil%whc)
@@ -306,7 +348,7 @@ end subroutine getvar_i2
 
 ! -----------------------------------------------------
 
-subroutine getvar_sp(ncid,varname,gridinfo,ovar)
+subroutine getvar_sp_3d(ncid,varname,gridinfo,ovar)
 
 use netcdf
 use parametersmod, only : i2,sp,stdout,stderr,rmissing
@@ -332,6 +374,8 @@ real(sp) :: missing_value
 
 real(sp), dimension(2) :: actual_range
 
+integer :: nl
+
 ! ----
 
 srtx = gridinfo%srtx
@@ -339,10 +383,12 @@ cntx = gridinfo%cntx
 srty = gridinfo%srty
 cnty = gridinfo%cnty
 
+nl = size(ovar,dim=3)
+
 ncstat = nf90_inq_varid(ncid,varname,varid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_get_var(ncid,varid,ovar,start=[srtx,srty,1],count=[cntx,cnty,6])
+ncstat = nf90_get_var(ncid,varid,ovar,start=[srtx,srty,1],count=[cntx,cnty,nl])
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ncstat = nf90_get_att(ncid,varid,'missing_value',missing_value)
@@ -357,7 +403,64 @@ write(stderr,*)'reading ',trim(varname),actual_range
 
 where (ovar == missing_value) ovar = rmissing
 
-end subroutine getvar_sp
+end subroutine getvar_sp_3d
+
+! -----------------------------------------------------
+
+subroutine getvar_sp_2d(ncid,varname,gridinfo,ovar)
+
+use netcdf
+use parametersmod, only : i2,sp,stdout,stderr,rmissing
+use errormod,      only : ncstat,netcdf_err
+use typesmod,      only : gridinfotype
+use ieee_arithmetic
+
+implicit none
+
+integer,                  intent(in)  :: ncid
+character(*),             intent(in)  :: varname
+type(gridinfotype),       intent(in)  :: gridinfo
+real(sp), dimension(:,:), intent(out) :: ovar
+
+integer :: srtx
+integer :: cntx
+integer :: srty
+integer :: cnty
+
+integer :: varid
+
+real(sp) :: missing_value
+
+real(sp), dimension(2) :: actual_range
+
+! ----
+
+write(0,*)'reading',varname
+
+srtx = gridinfo%srtx
+cntx = gridinfo%cntx
+srty = gridinfo%srty
+cnty = gridinfo%cnty
+
+ncstat = nf90_inq_varid(ncid,varname,varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid,varid,ovar,start=[srtx,srty],count=[cntx,cnty])
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_att(ncid,varid,'missing_value',missing_value)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+where (ieee_is_nan(ovar)) ovar = missing_value
+
+actual_range(1) = minval(ovar,mask = ovar /= missing_value)
+actual_range(2) = maxval(ovar,mask = ovar /= missing_value)
+
+write(stderr,*)'reading ',trim(varname),actual_range
+
+where (ovar == missing_value) ovar = rmissing
+
+end subroutine getvar_sp_2d
 
 ! -----------------------------------------------------
 

@@ -63,6 +63,7 @@ type terraintype
   real(sp) :: landf
   real(sp) :: waterf
   real(sp) :: icef
+  real(sp) :: thickness  ! soil and regolith thickness (m)
 end type terraintype
 
 ! ---
@@ -78,11 +79,27 @@ end type climatetype
 
 ! ---
 
+type soilcoordstype
+  real(sp) :: zpos
+  real(sp) :: dz
+  real(sp), dimension(2) :: bnds
+end type soilcoordstype
+
 type soiltype
+  real(sp) :: dz     ! actual layer thickness (cm)
   real(sp) :: Tsat
   real(sp) :: Ksat
   real(sp) :: whc
 end type soiltype
+
+! ---
+
+type soilwatertype
+  real(sp) :: whc    ! column-integrated water holding capacity (mm)
+  real(sp) :: w      ! instantaneous soil water content (mm)
+  real(sp) :: theta  ! volumetric water content (fraction)
+  real(sp) :: psi    ! soil matric potential (kPa)
+end type soilwatertype
 
 ! ---
 
@@ -176,6 +193,9 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: rdiffuse  ! surface downwelling radiation, diffuse beam component (kJ m-2 d-1)
   real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
+  real(sp) :: aet       ! actual evapotranspiration (mm)
+  real(sp) :: alpha     ! ratio of aet to pet
+  
   ! diagnostic output, uncomment this section as needed
 
   ! real(sp) :: wind_bias
@@ -190,6 +210,7 @@ end type metvars_daily
 type metvars_monthly
 
   real(sp) :: mpet
+  real(sp) :: alpha
 
 end type metvars_monthly
 
