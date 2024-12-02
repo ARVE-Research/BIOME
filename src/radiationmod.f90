@@ -482,7 +482,7 @@ implicit none
 real(sp),          intent(in)  :: Pjj      ! precipitation equitability index
 real(sp),          intent(in)  :: Ratm     ! relative atmospheric pressure (see function)
 real(sp),          intent(in)  :: rad0     ! top-of-atmospere insolation (kJ m-2 d-1)
-real(sp),          intent(in)  :: cldf     ! bright sunshine duration fraction, n/N (percent)
+real(sp),          intent(in)  :: cldf     ! total cloud cover (fraction)
 type(airmasspars), intent(in)  :: air      ! airmass parameters
 real(sp),          intent(in)  :: albedo   ! surface shortwave albedo
 real(sp),          intent(in)  :: prec     ! precipitation mm/day
@@ -538,7 +538,7 @@ end if
 ! Yin Eqn. 4.1
 tau = exp(-0.115 * Ratm * ((2.15 - 0.713 * x + exp(-6.74 / (prec + 1.))) * exp(0.0971 * pet) - 0.650 * (1. - x) * Pjj))
 
-fm = 0.01452 * (mbar + ml) * exp(1.403 * tau) - 0.1528 * mo + mc + 0.48700 * (mc - ml) + 0.2323   ! Eqn. 2.4 2nd term
+fm = 0.01452 * (mbar + ml) * exp(1.403 * tau) - 0.1528 * mo + mc + 0.4870 * (mc - ml) + 0.2323   ! Eqn. 2.4 2nd term
 
 direct = sunf * tau**kp * rad0 * tau**fm   ! Eqn. 2.4
 

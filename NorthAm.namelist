@@ -4,5 +4,10 @@
   gridinfo%isproj = .true.
 /
 
+! sample run command:
 
-! California -2117500/-1337500/-2012500/-372500
+! src/biome1 NorthAm.local.namelist -2117500/-617500/-1392500/-112500 test.nc
+
+! coordinate windows:
+! California: -2117500/-1337500/-2012500/-372500
+! 

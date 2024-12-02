@@ -142,7 +142,7 @@ call getarg(3,outfile)
 
 write(0,*)'go genoutput'
 
-call genoutputfile(jobfile,outfile,gridinfo,ofid)
+call genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 
 ! ---------------------------------
 ! check for valid pixels
@@ -417,7 +417,7 @@ do m = 1,nmos
       ! monthly summaries
 
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i,1)%dpet
-      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i,1)%alpha
+      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i,1)%alpha / real(ndm(m))
 
     end do ! cells
     

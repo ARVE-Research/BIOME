@@ -6,19 +6,20 @@ contains
 
 ! -----------------------------------------------------
 
-subroutine genoutputfile(jobfile,outfile,gridinfo,ofid)
+subroutine genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 
 use netcdf
 use errormod,      only : ncstat,netcdf_err
 use parametersmod, only : i2,dp,imissing,rmissing
-use typesmod,      only : gridinfotype
+use typesmod,      only : gridinfotype,coordstype
 
 implicit none
 
-character(*),       intent(in)  :: jobfile
-character(*),       intent(in)  :: outfile
-type(gridinfotype), intent(in)  :: gridinfo
-integer,            intent(out) :: ofid
+character(*),                     intent(in)  :: jobfile
+character(*),                     intent(in)  :: outfile
+type(gridinfotype),               intent(in)  :: gridinfo
+type(coordstype), dimension(:,:), intent(in)  :: coords
+integer,                          intent(out) :: ofid
 
 integer, dimension(4) :: dimids
 integer, dimension(4) :: chunks
@@ -28,6 +29,11 @@ character(10) :: now
 
 integer :: dimid
 integer :: varid
+
+integer :: m
+
+integer, dimension(12), parameter :: month = [(m,m=1,12)]
+integer, dimension(12), parameter :: PFT   = [(m,m=1,13)]
 
 real(dp), dimension(2) :: xrange = [0.,0.]
 real(dp), dimension(2) :: yrange = [0.,0.]
@@ -282,6 +288,63 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 ! ----
 
 ncstat = nf90_enddef(ofid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! write the coordinate variables
+
+if (gridinfo%isproj) then
+
+  ncstat = nf90_inq_varid(ofid,'x',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  ncstat = nf90_put_var(ofid,varid,coords(:,1)%xcoord)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  ncstat = nf90_inq_varid(ofid,'y',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+  
+  ncstat = nf90_put_var(ofid,varid,coords(1,:)%ycoord)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  ncstat = nf90_inq_varid(ofid,'lon',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+  
+  ncstat = nf90_put_var(ofid,varid,coords%geolon)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  ncstat = nf90_inq_varid(ofid,'lat',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+  
+  ncstat = nf90_put_var(ofid,varid,coords%geolat)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+else
+
+  ncstat = nf90_inq_varid(ofid,'lon',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+  
+  ncstat = nf90_put_var(ofid,varid,coords(:,1)%geolon)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+  ncstat = nf90_inq_varid(ofid,'lat',varid)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+  
+  ncstat = nf90_put_var(ofid,varid,coords(1,:)%geolat)
+  if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end if
+
+ncstat = nf90_inq_varid(ofid,'month',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,month)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_inq_varid(ofid,'PFT',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,pft)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 end subroutine genoutputfile
