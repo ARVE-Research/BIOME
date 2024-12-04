@@ -45,10 +45,12 @@ type pixeltype
   integer :: y
   real(dp) :: lon
   real(dp) :: lat
+  real(sp) :: elv  ! elevation (m)
   real(sp) :: Ratm ! relative atmospheric pressure
   real(sp) :: tcm  ! temperature of the coldest month
   real(sp) :: Pann ! total annual precipitation
   real(sp) :: Pjj  ! precipitation equitability index
+  real(sp) :: Tt   ! snow probability temperature (degC)
   ! logical :: valid
   ! integer, dimension(8) :: neighbors
 end type pixeltype
@@ -196,6 +198,10 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet
   
+  real(sp) :: dsnow    ! snow depth (cm)
+  real(sp) :: psnow    ! snow density ()
+  real(sp) :: asnow    ! snow depth (cm)
+  
   ! diagnostic output, uncomment this section as needed
 
   ! real(sp) :: wind_bias
@@ -211,6 +217,8 @@ type metvars_monthly
 
   real(sp) :: mpet
   real(sp) :: alpha
+  real(sp) :: direct
+  real(sp) :: diffuse
 
 end type metvars_monthly
 

@@ -18,6 +18,7 @@ biome1_SOURCES =       \
   diurnaltempmod.f90   \
   radiationmod.f90     \
   soilwatermod.f90     \
+  snowmod.f90          \
   biome1.f90
 
 clean-local:

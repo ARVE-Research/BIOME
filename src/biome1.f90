@@ -16,6 +16,7 @@ use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
 use radiationmod,    only : initairmass,elev_corr,radpet,Pjj
 use soilwatermod,    only : calcwhc,soilwater
+use snowmod,         only : Tt
 
 implicit none
 
@@ -44,6 +45,7 @@ type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
 type(climatetype),     allocatable, dimension(:,:,:) :: climate
 type(soiltype),        allocatable, dimension(:,:,:) :: soil
 
+real(sp), allocatable, dimension(:) :: tmax
 
 integer :: ncells
 
@@ -204,6 +206,8 @@ end if
 
 allocate(daily(ncells,ndy))
 
+allocate(tmax(ndy))
+
 allocate(soilw(ncells))
 
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
@@ -223,8 +227,18 @@ do i = 1,ncells
   ! calculate the column-integrated soil water holding capacity
   
   call calcwhc(terrain(x,y),soilcoords,soil(x,y,:),soilw(i))
+  
+  ! calculate the snow probability temperature Tt based on Tmax
+  
+!   Tmax = daily(i,:)%tmp + 0.5 * daily(i,:)%dtr
+!   
+!   pixel(i)%Tt = Tt(Tmax,pixel(i)%elv,pixel(i)%lat)
+!   
+!   write(0,*)i,pixel%elv,pixel(i)%lat,pixel(i)%Tt
 
 end do
+
+! stop
 
 allocate(met_in(ncells))
 allocate(dmet(ncells,2))  ! for the current and next day
@@ -416,6 +430,9 @@ do m = 1,nmos
       
       ! monthly summaries
 
+      mmet(i,m)%direct  = mmet(i,m)%direct  + dmet(i,1)%rdirect  / real(ndm(m))
+      mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet(i,1)%rdiffuse / real(ndm(m))
+
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i,1)%dpet
       mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i,1)%alpha / real(ndm(m))
 
@@ -432,6 +449,9 @@ write(0,*)
 ! write model output
 
 write(0,*)'writing'
+
+call writereal3d(ofid,gridinfo,pixel,'rdirect',mmet%direct)
+call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)

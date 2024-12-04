@@ -10,7 +10,7 @@ subroutine genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 
 use netcdf
 use errormod,      only : ncstat,netcdf_err
-use parametersmod, only : i2,dp,imissing,rmissing
+use parametersmod, only : i2,dp,imissing,rmissing,nmos,npft
 use typesmod,      only : gridinfotype,coordstype
 
 implicit none
@@ -32,8 +32,8 @@ integer :: varid
 
 integer :: m
 
-integer, dimension(12), parameter :: month = [(m,m=1,12)]
-integer, dimension(12), parameter :: PFT   = [(m,m=1,13)]
+integer, dimension(nmos), parameter :: month = [(m,m=1,12)]
+integer, dimension(npft), parameter :: PFT   = [(m,m=1,13)]
 
 real(dp), dimension(2) :: xrange = [0.,0.]
 real(dp), dimension(2) :: yrange = [0.,0.]
@@ -188,10 +188,10 @@ end if
 ! ----
 ! PFT coordinate
 
-ncstat = nf90_def_dim(ofid,'pft',13,dimid)
+ncstat = nf90_def_dim(ofid,'PFT',npft,dimid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_def_var(ofid,'pft',nf90_int,dimid,varid)
+ncstat = nf90_def_var(ofid,'PFT',nf90_int,dimid,varid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ncstat = nf90_put_att(ofid,varid,'long_name','plant functional type')
@@ -208,7 +208,7 @@ dimids(3) = dimid
 ! ----
 ! coordinate month
 
-ncstat = nf90_def_dim(ofid,'month',12,dimid)
+ncstat = nf90_def_dim(ofid,'month',nmos,dimid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ncstat = nf90_def_var(ofid,'month',nf90_int,dimid,varid)
@@ -233,20 +233,39 @@ chunks(3) = 1
 chunks(4) = 1
 
 ! ----
+! monthly mean direct-beam surface radiation
 
-ncstat = nf90_def_var(ofid,'biome',nf90_short,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+ncstat = nf90_def_var(ofid,'rdirect',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'long_name','biome')
+ncstat = nf90_put_att(ofid,varid,'long_name','direct-beam surface shortwave radiation')
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'units','biome')
+ncstat = nf90_put_att(ofid,varid,'units','MJ m-2 d-1')
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'_FillValue',imissing)
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'missing_value',imissing)
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly mean diffuse surface radiation
+
+ncstat = nf90_def_var(ofid,'rdiffuse',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','diffuse-beam surface shortwave radiation')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','MJ m-2 d-1')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
@@ -283,6 +302,24 @@ ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! biome (category)
+
+ncstat = nf90_def_var(ofid,'biome',nf90_short,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','biome')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','biome')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',imissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',imissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
