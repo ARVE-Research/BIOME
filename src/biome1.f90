@@ -162,13 +162,15 @@ i = 1
 do y = 1,cnty
   do x = 1,cntx
 
-    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing) cycle
+    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing) cycle
     
     pixel(i)%x = x
     pixel(i)%y = y
     
     pixel(i)%lon = coords(x,y)%geolon
     pixel(i)%lat = coords(x,y)%geolat
+
+    pixel(i)%elv = terrain(x,y)%elv
     
     ! temperature of the coldest month
 
@@ -182,7 +184,7 @@ do y = 1,cnty
     
     ! relative atmospheric pressure
     
-    pixel(i)%Ratm = elev_corr(terrain(x,y)%elv)
+    pixel(i)%Ratm = elev_corr(pixel(i)%elv)
     
     i = i + 1
 
@@ -230,15 +232,15 @@ do i = 1,ncells
   
   ! calculate the snow probability temperature Tt based on Tmax
   
-!   Tmax = daily(i,:)%tmp + 0.5 * daily(i,:)%dtr
-!   
-!   pixel(i)%Tt = Tt(Tmax,pixel(i)%elv,pixel(i)%lat)
-!   
-!   write(0,*)i,pixel%elv,pixel(i)%lat,pixel(i)%Tt
+  Tmax = daily(i,:)%tmp + 0.5 * daily(i,:)%dtr
+  
+  pixel(i)%Tt = Tt(Tmax,pixel(i)%elv,pixel(i)%lat)
+  
+  write(0,*)i,pixel(i)%elv,pixel(i)%lat,pixel(i)%Tt
 
 end do
 
-! stop
+stop
 
 allocate(met_in(ncells))
 allocate(dmet(ncells,2))  ! for the current and next day
