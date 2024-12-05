@@ -173,7 +173,7 @@ subroutine readclimate(climatefile,gridinfo,climate)
 
 use netcdf
 use errormod,  only : ncstat,netcdf_err
-use typesmod,  only : gridinfotype,climatetype
+use typesmod,  only : gridinfotype,monclimatetype
 
 implicit none
 
@@ -181,7 +181,7 @@ implicit none
 
 character(*),                        intent(in)  :: climatefile
 type(gridinfotype),                  intent(in)  :: gridinfo
-type(climatetype), dimension(:,:,:), intent(out) :: climate
+type(monclimatetype), dimension(:,:,:), intent(out) :: climate
 
 ! local variables
 

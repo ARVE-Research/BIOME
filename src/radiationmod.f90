@@ -21,8 +21,6 @@ private :: netrad_pet
 
 private :: m
 private :: F
-public  :: esat
-private :: desdT
 
 ! module calculated parameters
 
@@ -644,6 +642,7 @@ end function surf_lw
 subroutine netrad_pet(temp,sw_rad,lw_rad,albedo,netrad,pet)
 
 use parametersmod, only : sp,tfreeze
+use physicsmod,    only : desdT,gamma,lvap
 
 implicit none
 
@@ -659,18 +658,16 @@ real(sp), intent(out) :: pet     ! potential evapotranspiration (mm d-1)
 ! local variables
 
 real(sp) :: Tk     ! surface air temperature (K)
-real(sp) :: lvap   ! Latent heat of vaporization of water (temperature dependent) (kJ kg-1)
-real(sp) :: gamma  ! psychrometer constant (Pa K-1)
 real(sp) :: ss     ! rate of increase of saturated vapor pressure with temperature (desdT) (Pa K-1)
+
+! functions used
+! real(sp) :: lvap   ! Latent heat of vaporization of water (temperature dependent) (kJ kg-1)
+! real(sp) :: gamma  ! psychrometer constant (Pa K-1)
 
 ! ----
 ! calculate gamma, lvap, and ss
 
 Tk = temp + Tfreeze
-
-gamma = 65.05 + temp * 0.064  ! psychrometer constant
-
-lvap = 0.001 * 1.91846e6 * (Tk / (Tk - 33.91))**2  ! (kJ kg-1) Eqn. from Henderson-Sellers (1984)
 
 ss = desdT(Tk)
 
@@ -678,143 +675,9 @@ ss = desdT(Tk)
 
 netrad = (1. - albedo) * sw_rad - lw_rad             ! (kJ m-2 d-1)
 
-pet = max((ss / (ss + gamma)) * netrad / lvap, 0.)   ! (mm d-1)
+pet = max((ss / (ss + gamma(temp))) * netrad / lvap(temp), 0.)   ! (mm d-1)
 
 end subroutine netrad_pet
-
-! ----------------------------------------------------------------------------------------------------------------
-
-real(sp) function esat(temp)
-  
-  ! Function to calculate saturation vapor pressure in water and ice
-  ! From CLM formulation, table 5.2, after Flatau et al. 1992
-  ! calculated in double precision because temperatures close to zero cause underflow
-  
-  use parametersmod, only : dp,tfreeze
-
-  implicit none
-  
-  ! argument
-  
-  real(sp), intent(in) :: temp  ! temperature in K
-  
-  ! parameters
-
-  ! coefficients for liquid water
-
-  real(dp), dimension(9), parameter :: al = [ 6.11213476     ,  &
-                                              4.44007856e-1  ,  &
-                                              1.43064234e-2  ,  &
-                                              2.64461437e-4  ,  &
-                                              3.05903558e-6  ,  &
-                                              1.96237241e-8  ,  &
-                                              8.92344772e-11 ,  &
-                                             -3.73208410e-13 ,  &
-                                              2.09339997e-16 ]
-  
-  ! coefficients for ice
-
-  real(dp), dimension(9), parameter :: ai = [ 6.11123516     ,  &
-                                              5.03109514e-1  ,  &
-                                              1.88369801e-2  ,  &
-                                              4.20547422e-4  ,  &
-                                              6.14396778e-6  ,  &
-                                              6.02780717e-8  ,  &
-                                              3.87940929e-10 ,  &
-                                              1.49436277e-12 ,  &
-                                              2.62655803e-15 ]
-
-  integer, dimension(9), parameter :: p = [0,1,2,3,4,5,6,7,8]
-
-  ! local variables
-  
-  real(dp) :: esatdp
-  real(dp) :: T  
-
-  real(dp), dimension(9) :: a
-  
-  ! ----
-
-  if (temp <= tfreeze) then   ! these coefficients are for temperature values in Celcius
-    a = ai
-  else
-    a = al
-  end if
-  
-  T = temp - tfreeze
-
-  esatdp = sum(a * T**p)
-  
-  esat = real(100._dp * esatdp)
-   
-end function esat
-
-! ----------------------------------------------------------------------------------------------------------------
-
-real(sp) function desdT(temp)
-
-  ! Function to calculate the first derivative of saturation vapor pressure in water and ice vs. temperature
-  ! From CLM formulation, table 5.3, after Flatau et al. 1992
-  
-  use parametersmod, only : dp,tfreeze
-  
-  implicit none
- 
-  ! argument
-
-  real(sp), intent(in) :: temp ! temperature in K
-
-  ! parameters
-  
-  ! coefficients for liquid water
-
-  real(sp), dimension(9), parameter :: bl = [ 4.44017302e-1  ,  &
-                                              2.86064092e-2  ,  &
-                                              7.94683137e-4  ,  &
-                                              1.21211669e-5  ,  &
-                                              1.03354611e-7  ,  &
-                                              4.04125005e-10 ,  &
-                                             -7.88037859e-13 ,  &
-                                             -1.14596802e-14 ,  &
-                                              3.81294516e-17 ]
-
-
-  ! coefficients for ice
-  
-  real(sp), dimension(9), parameter :: bi = [ 5.03277922e-1  ,  &
-                                              3.77289173e-2  ,  &
-                                              1.26801703e-3  ,  &
-                                              2.49468427e-5  ,  &
-                                              3.13703411e-7  ,  &
-                                              2.57180651e-9  ,  &
-                                              1.32268878e-11 ,  &
-                                              3.94116744e-14 ,  &
-                                              4.98070196e-17 ]
-
-  integer, dimension(9), parameter :: p = [0,1,2,3,4,5,6,7,8]
-
-  ! local variables
-
-  real(dp), dimension(9) :: b ! coefficients
-
-  real(dp) :: T
-  real(dp) :: desdTdp
-
-  ! ----
-  
-  if (temp <= tfreeze) then
-    b = bi
-  else
-    b = bl
-  end if
-
-  T = temp - tfreeze  ! these coefficients are for temperature values in Celcius
-  
-  desdTdp = sum(b * T**p)
-    
-  desdT = real(100._dp * desdTdp)
-
-end function desdT
 
 ! ----------------------------------------------------------------------------------------------------------------
 

@@ -10,7 +10,8 @@ implicit none
 public :: gridinfotype
 public :: coordstype
 public :: terraintype
-public :: climatetype
+public :: monclimatetype
+public :: dayclimatetype
 public :: soiltype
 public :: metvars_in
 public :: metvars_daily
@@ -70,14 +71,23 @@ end type terraintype
 
 ! ---
 
-type climatetype
+type monclimatetype
   real(sp) :: tmp
   real(sp) :: dtr
   real(sp) :: pre
   real(sp) :: cld
   real(sp) :: wnd
   real(sp) :: wet
-end type climatetype
+end type monclimatetype
+
+! ---
+
+type dayclimatetype
+  real(sp) :: tmin
+  real(sp) :: tmax
+  real(sp) :: cld
+  real(sp) :: wnd
+end type dayclimatetype
 
 ! ---
 

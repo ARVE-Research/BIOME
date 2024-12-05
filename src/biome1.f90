@@ -38,13 +38,14 @@ type(pixeltype),       allocatable, dimension(:)     :: pixel
 type(metvars_in),      allocatable, dimension(:)     :: met_in
 type(coordstype),      allocatable, dimension(:,:)   :: coords
 type(terraintype),     allocatable, dimension(:,:)   :: terrain
-type(climatetype),     allocatable, dimension(:,:)   :: daily
+type(dayclimatetype),  allocatable, dimension(:,:)   :: daily
 type(soilwatertype),   allocatable, dimension(:)     :: soilw
 type(metvars_daily),   allocatable, dimension(:,:)   :: dmet
 type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
-type(climatetype),     allocatable, dimension(:,:,:) :: climate
+type(monclimatetype),  allocatable, dimension(:,:,:) :: climate
 type(soiltype),        allocatable, dimension(:,:,:) :: soil
 
+real(sp), allocatable, dimension(:) :: tmin
 real(sp), allocatable, dimension(:) :: tmax
 
 integer :: ncells
@@ -149,7 +150,7 @@ call genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 ! ---------------------------------
 ! check for valid pixels
 
-ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing)
+ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing)
 
 write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
@@ -172,7 +173,7 @@ do y = 1,cnty
 
     pixel(i)%elv = terrain(x,y)%elv
     
-    ! temperature of the coldest month
+    ! mean temperature of the coldest month
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
     
@@ -208,7 +209,8 @@ end if
 
 allocate(daily(ncells,ndy))
 
-allocate(tmax(ndy))
+allocate(tmin(nmos))
+allocate(tmax(nmos))
 
 allocate(soilw(ncells))
 
@@ -221,8 +223,11 @@ do i = 1,ncells
   x = pixel(i)%x
   y = pixel(i)%y
   
-  call newspline(climate(x,y,:)%tmp,ndm,[climate(x,y,nmos)%tmp,climate(x,y,1)%tmp],daily(i,:)%tmp)
-  call newspline(climate(x,y,:)%dtr,ndm,[climate(x,y,nmos)%dtr,climate(x,y,1)%dtr],daily(i,:)%dtr)
+  tmin = climate(x,y,:)%tmp - 0.5 * climate(x,y,:)%dtr
+  tmax = climate(x,y,:)%tmp + 0.5 * climate(x,y,:)%dtr
+  
+  call newspline(tmin,ndm,[tmin(nmos),tmin(1)],daily(i,:)%tmin)
+  call newspline(tmax,ndm,[tmax(nmos),tmax(1)],daily(i,:)%tmax)
   call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
   call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
   
@@ -230,17 +235,14 @@ do i = 1,ncells
   
   call calcwhc(terrain(x,y),soilcoords,soil(x,y,:),soilw(i))
   
-  ! calculate the snow probability temperature Tt based on Tmax
+  ! calculate the snow probability temperature Tt
   
-  Tmax = daily(i,:)%tmp + 0.5 * daily(i,:)%dtr
+  pixel(i)%Tt = Tt(pixel(i)%elv,pixel(i)%lat)
   
-  pixel(i)%Tt = Tt(Tmax,pixel(i)%elv,pixel(i)%lat)
-  
-  write(0,*)i,pixel(i)%elv,pixel(i)%lat,pixel(i)%Tt
-
 end do
 
-stop
+deallocate(tmin)
+deallocate(tmax)
 
 allocate(met_in(ncells))
 allocate(dmet(ncells,2))  ! for the current and next day
@@ -316,8 +318,8 @@ do m = 1,nmos
       met_in(i)%wetf = climate(x,y,m)%wet
       met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
 
-      met_in(i)%tmin = daily(i,doy)%tmp - 0.5 * daily(i,doy)%dtr
-      met_in(i)%tmax = daily(i,doy)%tmp + 0.5 * daily(i,doy)%dtr
+      met_in(i)%tmin = daily(i,doy)%tmin
+      met_in(i)%tmax = daily(i,doy)%tmax
       met_in(i)%cldf = daily(i,doy)%cld * 0.01
       met_in(i)%wind = daily(i,doy)%wnd
 
@@ -350,6 +352,10 @@ do m = 1,nmos
   
       call radpet(pixel(i),solar,albedo,dmet(i,1))
       
+      ! snow dynamics
+      
+      
+      
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet(i,1),soilw(i))
@@ -367,8 +373,10 @@ end do     ! month
 write(0,*)
 write(0,*)'start computation daily loop'
 
-mmet%mpet = 0.
+mmet%mpet  = 0.
 mmet%alpha = 0.
+mmet%direct  = 0.
+mmet%diffuse = 0.
 
 doy = 1
 
@@ -394,8 +402,8 @@ do m = 1,nmos
       met_in(i)%wetf = climate(x,y,m)%wet
       met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
       
-      met_in(i)%tmin = daily(i,doy)%tmp - 0.5 * daily(i,doy)%dtr
-      met_in(i)%tmax = daily(i,doy)%tmp + 0.5 * daily(i,doy)%dtr
+      met_in(i)%tmin = daily(i,doy)%tmin
+      met_in(i)%tmax = daily(i,doy)%tmax
       met_in(i)%cldf = daily(i,doy)%cld * 0.01
       met_in(i)%wind = daily(i,doy)%wnd
 

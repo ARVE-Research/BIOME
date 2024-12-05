@@ -10,6 +10,7 @@ biome1_SOURCES =       \
   coordsmod.f90        \
   readdatamod.f90      \
   netcdfoutputmod.f90  \
+  physicsmod.f90       \
   orbitmod.f90         \
   calendarmod.f90      \
   insolationmod.f90    \
