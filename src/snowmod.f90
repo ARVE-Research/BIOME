@@ -75,7 +75,7 @@ end function frain
 
 ! ---------------------------------------
 
-real(sp) function snowmelt(temp,SWE,Rnet)
+real(sp) function snowmelt(P,temp,SWE,Rnet)
 
 ! Sandoval et al. (2024) eqn. 21, output units mm d-1
 
@@ -86,6 +86,7 @@ implicit none
 
 ! arguments
 
+real(sp), intent(in) :: P     ! mean air pressure (Pa)
 real(sp), intent(in) :: temp  ! temperature (degC)
 real(sp), intent(in) :: SWE   ! snow-water equivalent (mm)
 real(sp), intent(in) :: Rnet  ! net radiation (MJ m-2 d-1)
@@ -117,7 +118,7 @@ else
 
 end if
 
-Eswe = min(snowmelt,Rnet / Econ(temp) * 1000.)
+Eswe = min(snowmelt,Rnet / Econ(P,temp) * 1000.)
 
 snowmelt = snowmelt - Eswe
 

@@ -14,6 +14,7 @@ use weathergenmod,   only : weathergen
 use calendarmod
 use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
+use physicsmod,      only : stdP
 use radiationmod,    only : initairmass,elev_corr,radpet,Pjj
 use soilwatermod,    only : calcwhc,soilwater
 use snowmod,         only : Tt
@@ -186,6 +187,7 @@ do y = 1,cnty
     ! relative atmospheric pressure
     
     pixel(i)%Ratm = elev_corr(pixel(i)%elv)
+    pixel(i)%P    = stdP(pixel(i)%elv)
     
     i = i + 1
 
@@ -428,7 +430,7 @@ do m = 1,nmos
 
       call diurnaltemp(dmet(i,:))
       
-      albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
+      albedo = 0.17  ! shortwave albedo for vegetated surfaces, after Federer (1968) in Davis et al. (2017)
 
       ! calculate surface solar radiation and potential evapotranspiration
 

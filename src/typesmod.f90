@@ -47,6 +47,7 @@ type pixeltype
   real(dp) :: lon
   real(dp) :: lat
   real(sp) :: elv  ! elevation (m)
+  real(sp) :: P    ! mean atmospheric pressure (Pa)
   real(sp) :: Ratm ! relative atmospheric pressure
   real(sp) :: tcm  ! temperature of the coldest month
   real(sp) :: Pann ! total annual precipitation

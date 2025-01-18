@@ -149,6 +149,7 @@ real(sp) :: tcm   ! temperature of the coldest month
 real(sp) :: Pann  ! total annual precipitation (mm) 
 real(sp) :: Pjj   ! precipitation equitability index 
 real(sp) :: Ratm  ! relative atmospheric pressure (based on elevation)
+real(sp) :: P     ! mean atmospheric pressure (based on elevation)
 
 type(airmasspars) :: air
 
@@ -190,6 +191,7 @@ tcm  = pixel%tcm
 Pjj  = pixel%Pjj
 Pann = pixel%Pann
 Ratm = pixel%Ratm
+P    = pixel%P
 
 toa_sw = rad0 * dayl * 3.6   ! convert W m-2 to kJ m-2 d-1
 
@@ -214,7 +216,7 @@ do
 
   sw_rad = direct + diffuse
 
-  call netrad_pet(tday,sw_rad,lw_rad,albedo,netrad,dpet)
+  call netrad_pet(P,tday,sw_rad,lw_rad,albedo,netrad,dpet)
 
   ! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
 
@@ -639,21 +641,26 @@ end function surf_lw
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine netrad_pet(temp,sw_rad,lw_rad,albedo,netrad,pet)
+subroutine netrad_pet(P,Tair,sw_rad,lw_rad,albedo,netrad,pet)
 
 use parametersmod, only : sp,tfreeze
-use physicsmod,    only : desdT,gamma,lvap
+use physicsmod,    only : desdT,gamma,lvap,Econ
 
 implicit none
 
 ! arguments
 
-real(sp), intent(in)  :: temp    ! air temperature (degC)
+real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+real(sp), intent(in)  :: Tair    ! air temperature (degC)
 real(sp), intent(in)  :: sw_rad  ! downwelling shortwave radiation (kJ m-2 d-1)
 real(sp), intent(in)  :: lw_rad  ! net longwave radiation (kJ m-2 d-1)
 real(sp), intent(in)  :: albedo  ! surface shortwave albedo (fraction)
 real(sp), intent(out) :: netrad  ! net radiation (kJ m-2 d-1)
 real(sp), intent(out) :: pet     ! potential evapotranspiration (mm d-1)
+
+! parameter
+
+real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
 
 ! local variables
 
@@ -661,21 +668,25 @@ real(sp) :: Tk     ! surface air temperature (K)
 real(sp) :: ss     ! rate of increase of saturated vapor pressure with temperature (desdT) (Pa K-1)
 
 ! functions used
+
 ! real(sp) :: lvap   ! Latent heat of vaporization of water (temperature dependent) (kJ kg-1)
 ! real(sp) :: gamma  ! psychrometer constant (Pa K-1)
+! real(sp) :: Econ   ! energy-to-water conversion factor (m3 kJ-1)
 
 ! ----
 ! calculate gamma, lvap, and ss
 
-Tk = temp + Tfreeze
-
-ss = desdT(Tk)
+! Tk = temp + Tfreeze
+! 
+! ss = desdT(Tk)
 
 ! calculate net radiation and PET
 
 netrad = (1. - albedo) * sw_rad - lw_rad             ! (kJ m-2 d-1)
 
-pet = max((ss / (ss + gamma(temp))) * netrad / lvap(temp), 0.)   ! (mm d-1)
+pet = (1. + omega) * 1000. * Econ(P,Tair) * max(netrad,0.)  ! 1.e3 converts m to mm
+
+! pet = max((ss / (ss + gamma(temp))) * netrad / lvap(temp), 0.)   ! (mm d-1)
 
 end subroutine netrad_pet
 
