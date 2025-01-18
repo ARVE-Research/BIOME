@@ -37,11 +37,14 @@ real(sp), intent(in) :: elv  ! elevation (meters above sea level)
 
 ! local variable
 
+real(sp) :: H  ! elevation (km)
 real(sp) :: T  ! standard atmosphere temperature
 
 ! ----
 
-T = 288.15 - 6.5 * elv  ! eqn 1.16
+H = elv / 1000.
+
+T = 288.15 - 6.5 * H  ! eqn 1.16
 
 stdP = 101325. * (288.15 / T)**(-5.255877)  ! eqn 1.17
 
