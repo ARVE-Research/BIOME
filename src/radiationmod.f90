@@ -210,11 +210,13 @@ do
 
   tdew = dewpoint(tmin,tmax,dpet,Pann)
 
-  lw_rad = surf_lw(tday,tdew,cldf,dayl)
-
   call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,dpet,direct,diffuse)
 
   sw_rad = direct + diffuse
+
+  lw_rad = surf_lw(tday,tdew,cldf,dayl)
+  
+  ! lw_rad = surf_lw2(toa_sw,direct,diffuse,tday)
 
   call netrad_pet(P,tday,sw_rad,lw_rad,albedo,netrad,dpet)
 
@@ -467,10 +469,11 @@ end subroutine airmass
 
 subroutine surf_sw(Pjj,Ratm,rad0,cldf,air,albedo,prec,tcm,pet,direct,diffuse)
 
-! This code is based on the paper:
-! X. Yin (1998) Temporally-aggregated atmospheric optical properties as a function of common climatic information:
-! Systems development and application, Meteorol. Atmos. Phys. 68, 99-113
-! Jed Kaplan, EPFL, 2008
+! This code is based on the papers:
+! Yin, X. (1997). Optical air mass: Daily integration and its applications.
+!   Meteorology and Atmospheric Physics, 63(3-4), 227-233. doi:10.1007/Bf01027387
+! Yin, X. W. (1998). Temporally-aggregated atmospheric optical properties as a function of common climatic information:
+!   Systems development and application. Meteorology and Atmospheric Physics, 68(1-2), 99-113. doi:10.1007/Bf01025387
 
 use parametersmod, only : sp,pi
 use typesmod,      only : airmasspars
@@ -501,7 +504,7 @@ real(sp) :: ml     ! air mass at cosine zenith angle bottom quarter range point
 real(sp) :: tau    ! direct insolation atmospheric turbidity factor
 real(sp) :: zeta0  ! diffuse insolation atmospheric turbidity factor
 real(sp) :: x      ! tropics indicator (tropical = 1, else 0)
-real(sp) :: fm     ! atmospheric transmittance function
+real(sp) :: fm     ! atmospheric transmittance function, this is also called tau0 in some papers
 
 ! real(sp) :: j2w
 ! real(sp) :: fdif
@@ -538,7 +541,7 @@ end if
 ! Yin Eqn. 4.1
 tau = exp(-0.115 * Ratm * ((2.15 - 0.713 * x + exp(-6.74 / (prec + 1.))) * exp(0.0971 * pet) - 0.650 * (1. - x) * Pjj))
 
-fm = 0.01452 * (mbar + ml) * exp(1.403 * tau) - 0.1528 * mo + mc + 0.4870 * (mc - ml) + 0.2323   ! Eqn. 2.4 2nd term
+fm = 0.01452 * (mbar + ml) * exp(1.403 * tau) - 0.1528 * mo + mc + 0.4870 * (mc - ml) + 0.2323   ! Yin (1997) eqn 3.3
 
 direct = sunf * tau**kp * rad0 * tau**fm   ! Eqn. 2.4
 
@@ -546,7 +549,7 @@ direct = sunf * tau**kp * rad0 * tau**fm   ! Eqn. 2.4
 zeta0 = 0.503 * exp(-1.20 * Ratm * exp(-0.633 / (prec + 1.) - 0.226 * pet)) * kag**albedo * kan**(1. - sunf) * & 
         (1. - kn * (1. - sunf))
 
-diffuse = zeta0 * kag**albedo * kan**(1. - sunf) * (1 - kn * (1. - sunf)) * (tau**kp * rad0 - direct)   ! Eqn. 2.5
+diffuse = zeta0 * kag**albedo * kan**(1. - sunf) * (1 - kn * (1. - sunf)) * (tau**kp * rad0 - direct)   !  Eqn. 2.5
 
 end subroutine surf_sw
 
@@ -631,7 +634,7 @@ D = tdewK - tairK
 
 Ql_dn = sb * (tairK + a*cldf**2 + b*cldf + c + 0.84 * (D + 4.01))**4  ! downwelling longwave (W m-2) Josey et al. Eqn. 14,J2
 
-Ql = Ql_up - (1. - al) * Ql_dn   ! Josey et al., Eqn 1
+Ql = (1. - al) * Ql_dn + Ql_up   ! Josey et al., Eqn 1
 
 ! ----
 
@@ -840,6 +843,93 @@ L = 1.91846e6 * (tairK / (tairK))**2  ! (J kg-1) Eqn. from Henderson-Sellers (19
 rhum = 100. * exp(-L / (Rw * tairK * tdewK) * (tairK - tdewK)) ! eqn 12
 
 end function rhum
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function sf(rad0,direct,diffuse)  ! bright sunshine fraction (fraction)
+
+! sunshine fraction (sf) from eqn 11 of
+! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
+! Simple process-led algorithms for simulating habitats (SPLASH v.2.0): robust calculations of water and energy fluxes. 
+! Geoscientific Model Development, 17(10), 4229-4309. doi:10.5194/gmd-17-4229-2024
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: rad0     ! 
+real(sp), intent(in) :: direct   ! 
+real(sp), intent(in) :: diffuse  ! 
+
+! parameters
+
+real(sp), parameter :: k5 = 0.1898
+real(sp), parameter :: k6 = 0.7410
+
+real(sp), parameter :: c = 1. / k6
+
+! local variables
+
+real(sp) :: tau   ! total atmospheric transmittance: (ration of total surface SW to TOA SW)
+real(sp) :: tau0  ! clear-sky atmospheric transmittance: (ratio of surface direct SW to TOA SW)
+
+real(sp) :: a
+real(sp) :: b
+
+! ----
+
+tau = (direct + diffuse) / rad0
+
+tau0 = direct / rad0
+
+a = tau - tau0 * k5
+
+b = tau0 * (1. - k5)
+
+sf = (a / b)**c
+
+end function sf
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function surf_lw2(rad0,direct,diffuse,Tair)
+
+! longwave radiation (sf) from eqn 12 of
+! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
+! Simple process-led algorithms for simulating habitats (SPLASH v.2.0): robust calculations of water and energy fluxes. 
+! Geoscientific Model Development, 17(10), 4229-4309. doi:10.5194/gmd-17-4229-2024
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: rad0     ! 
+real(sp), intent(in)  :: direct   ! 
+real(sp), intent(in)  :: diffuse  ! 
+real(sp), intent(in)  :: Tair     ! air temperature (degC)
+
+! parameters
+
+real(sp), parameter :: k1 = 91.86  ! (degC)
+real(sp), parameter :: k2 =  1.95
+real(sp), parameter :: k3 =  0.20
+real(sp), parameter :: k4 =  0.088
+
+! local variables
+
+real(sp) :: sunf
+
+! ----
+
+sunf = sf(rad0,direct,diffuse)
+
+surf_lw2 = (k4 + (1. - k3) * sunf) * (k1 + k2 * Tair)
+
+end function surf_lw2
 
 ! ----------------------------------------------------------------------------------------------------------------
 
