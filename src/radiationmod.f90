@@ -140,6 +140,7 @@ type(metvars_daily), intent(inout) :: met
 ! local variables
 
 real(dp) :: lat   ! latitude (degrees)
+real(sp) :: elv   ! elevation (m)
 real(sp) :: tday  ! daytime mean temperature (C)
 real(sp) :: prec  ! daily total precipitation
 real(sp) :: cldf  ! cloud cover fraction
@@ -187,6 +188,7 @@ cldf = met%cldf
 prec = met%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night
 
 lat  = pixel%lat
+elv  = pixel%elv
 tcm  = pixel%tcm
 Pjj  = pixel%Pjj
 Pann = pixel%Pann
@@ -216,7 +218,7 @@ do
 
   lw_rad = surf_lw(tday,tdew,cldf,dayl)
   
-  ! lw_rad = surf_lw2(toa_sw,direct,diffuse,tday)
+  ! lw_rad = surf_lw2(elv,toa_sw,direct,diffuse,tday)
 
   call netrad_pet(P,tday,sw_rad,lw_rad,albedo,netrad,dpet)
 
@@ -549,7 +551,7 @@ direct = sunf * tau**kp * rad0 * tau**fm   ! Eqn. 2.4
 zeta0 = 0.503 * exp(-1.20 * Ratm * exp(-0.633 / (prec + 1.) - 0.226 * pet)) * kag**albedo * kan**(1. - sunf) * & 
         (1. - kn * (1. - sunf))
 
-diffuse = zeta0 * kag**albedo * kan**(1. - sunf) * (1 - kn * (1. - sunf)) * (tau**kp * rad0 - direct)   !  Eqn. 2.5
+diffuse = zeta0 * kag**albedo * kan**(1. - sunf) * (1 - kn * (1. - sunf)) * (tau**kp * rad0 - direct)   ! Eqn. 2.5
 
 end subroutine surf_sw
 
@@ -634,7 +636,7 @@ D = tdewK - tairK
 
 Ql_dn = sb * (tairK + a*cldf**2 + b*cldf + c + 0.84 * (D + 4.01))**4  ! downwelling longwave (W m-2) Josey et al. Eqn. 14,J2
 
-Ql = (1. - al) * Ql_dn + Ql_up   ! Josey et al., Eqn 1
+Ql = (1. - al) * Ql_dn - Ql_up   ! Josey et al., Eqn 1
 
 ! ----
 
@@ -846,7 +848,7 @@ end function rhum
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function sf(rad0,direct,diffuse)  ! bright sunshine fraction (fraction)
+real(sp) function sf(elv,rad0,direct,diffuse)  ! bright sunshine fraction (fraction)
 
 ! sunshine fraction (sf) from eqn 11 of
 ! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
@@ -859,6 +861,7 @@ implicit none
 
 ! arguments
 
+real(sp), intent(in) :: elv      ! elevation (m) 
 real(sp), intent(in) :: rad0     ! 
 real(sp), intent(in) :: direct   ! 
 real(sp), intent(in) :: diffuse  ! 
@@ -867,7 +870,6 @@ real(sp), intent(in) :: diffuse  !
 
 real(sp), parameter :: k5 = 0.1898
 real(sp), parameter :: k6 = 0.7410
-
 real(sp), parameter :: c = 1. / k6
 
 ! local variables
@@ -880,9 +882,17 @@ real(sp) :: b
 
 ! ----
 
-tau = (direct + diffuse) / rad0
+tau0 = 0.75 * 1. + 2.67e-5 * elv
 
-tau0 = direct / rad0
+if (rad0 > 0) then
+
+  tau = (direct + diffuse) / rad0
+
+else
+
+  tau = tau0
+
+end if
 
 a = tau - tau0 * k5
 
@@ -894,7 +904,7 @@ end function sf
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function surf_lw2(rad0,direct,diffuse,Tair)
+real(sp) function surf_lw2(elv,rad0,direct,diffuse,Tair)
 
 ! longwave radiation (sf) from eqn 12 of
 ! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
@@ -907,6 +917,7 @@ implicit none
 
 ! arguments
 
+real(sp), intent(in)  :: elv      ! elevation (m)
 real(sp), intent(in)  :: rad0     ! 
 real(sp), intent(in)  :: direct   ! 
 real(sp), intent(in)  :: diffuse  ! 
@@ -925,7 +936,7 @@ real(sp) :: sunf
 
 ! ----
 
-sunf = sf(rad0,direct,diffuse)
+sunf = sf(elv,rad0,direct,diffuse)
 
 surf_lw2 = (k4 + (1. - k3) * sunf) * (k1 + k2 * Tair)
 
