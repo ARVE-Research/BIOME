@@ -11,7 +11,7 @@ contains
 
 ! ---------------------------------------------------------
 
-subroutine diurnaltemp(met)
+subroutine diurnaltemp(met,met1)
 
 ! Based on: 
 ! Cesaraccio, C., Spano, D., Duce, P., & Snyder, R. L. (2001). 
@@ -27,7 +27,8 @@ implicit none
 
 ! arguments
 
-type(metvars_daily), dimension(:), intent(inout) :: met
+type(metvars_daily), intent(inout) :: met   ! meteorological variables of the current day
+type(metvars_daily), intent(in)    :: met1  ! meteorological variables of the next day, only used to set next-day (predawn) tmin
 
 ! parameter
 
@@ -70,15 +71,16 @@ real(sp) :: ti    ! sunset to midnight
 real(sp) :: ti1   ! midnight to sunrise
 
 ! -------------------------
+
+dayl0 = met%dayl   ! current day daylength
+dayl1 = met1%dayl  ! next day daylength
+tmin0 = met%tmin   ! temperature at sunrise of the current day
+tmin1 = met1%tmin  ! temperature at sunrise of the next day
+tmax  = met%tmax   ! daytime maximum temperature
+
 ! to separate daytime and nighttime: (Leo Lai May 2019)
 ! define daylength of polar night to be 1 hour
 ! define daylength of polar day to be 23 hours
-
-dayl0 = met(1)%dayl
-dayl1 = met(2)%dayl
-tmin0 = met(1)%tmin
-tmin1 = met(2)%tmin
-tmax  = met(1)%tmax
 
 dl0 = min(max(dayl0,mindayl),maxdayl)
 dl1 = min(max(dayl1,mindayl),mindayl)
@@ -92,10 +94,10 @@ r  = tmax - t0
 
 ! sunrise and sunset hour of the current day (relative to local solar noon)
 
-hdl0 = 0.5 * dl0
+hdl0 = 0.5 * dl0  ! half-daylength of the current day
 
-sunrise0 = 12. - hdl0
-sunset   = 12. + hdl0
+sunrise0 = 12. - hdl0  ! sunrise hour of the current day
+sunset   = 12. + hdl0  ! sunset hour of the current day
 
 ! sunrise hour of the next day (relative to local solar noon)
 
@@ -107,20 +109,20 @@ sunrise1 = 12. - hdl1
 
 hpeakt = 12. + 2. * hdl0 * tfpk
 
-! length of the night
+! ----
+! nighttime temperature: integral from sunset to sunrise of the next day (part III) 
 
-hni = 12. - sunset + sunrise1
+hni = 12. - sunset + sunrise1  ! length of the night
 
-! integral from sunset to sunrise of the next day (part III)
+b = (tmin1 - t0) / sqrt(hni)   ! Cesaraccio et al. eqn. 10
 
-b = (tmin1 - t0) / sqrt(hni) ! Cesaraccio et al. eqn. 10
-
-ti  = t0 * sunset  ! temperature at sunset
+ti  = t0 * sunset              ! temperature at sunset
 
 ti1 = t0 * (sunset + hni) + 2./3. * b * (hni**(3./2.))  ! temperature at sunrise (next day)
 
 tnight = (ti1 - ti) / hni
 
+! ----
 ! hours between sunrise and time of peak temperature
 
 morn = sunrise0 - hpeakt  
@@ -145,8 +147,8 @@ tday = (tam + tpm) / 2.
 
 ! ---
 
-met(1)%tday   = tday
-met(1)%tnight = tnight
+met%tday   = tday
+met%tnight = tnight
 
 end subroutine diurnaltemp
 

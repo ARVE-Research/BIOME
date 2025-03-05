@@ -27,6 +27,11 @@ real(dp), parameter :: pir = pi / 180._dp
 
 integer, parameter :: npft = 13
 
+real(sp), parameter :: pi_sp = 3.1415926
+real(dp), parameter :: pi_dp = 3.14159265358979323846_dp
+
+real(sp), parameter :: pir_sp = pi_sp / 180.
+
 ! --------------------------------------------------------------------------------------------------------
 ! calendar parameters
 

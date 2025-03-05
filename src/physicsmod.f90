@@ -8,7 +8,7 @@ real(sp), parameter :: Tfreeze = 273.15
 
 public :: pw
 public :: lvap
-public :: gamma
+public :: psygamma
 public :: esat
 public :: desdT
 public :: Econ
@@ -113,7 +113,7 @@ end function lvap
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function gamma(P,Tair)  ! (Pa K-1)
+real(sp) function psygamma(P,Tair)  ! (Pa K-1)
 
 ! function to calculate the psychrometric constant
 ! there are many sources for the formula to calculate temperature- and pressure-dependent gamma
@@ -138,9 +138,9 @@ real(sp), parameter  :: Cp  = 1.0057     ! specific heat capacity of air at cons
 
 ! ----
 
-gamma = Cp * P / (eps * lvap(Tair)) ! eqn 8
+psygamma = Cp * P / (eps * lvap(Tair)) ! eqn 8
 
-end function gamma
+end function psygamma
 
 ! ----------------------------------------------------------------------------------------------------------------
 
@@ -261,7 +261,7 @@ real(sp) :: ss  ! rate of change of saturation vapor pressure with temperature (
 
 ss = desdT(Tair)
 
-Econ = ss / (lvap(Tair) * pw(Tair) * (ss + 0.24 * gamma(P,Tair)))  ! eqn 51
+Econ = ss / (lvap(Tair) * pw(Tair) * (ss + 0.24 * psygamma(P,Tair)))  ! eqn 51
 
 end function Econ
 

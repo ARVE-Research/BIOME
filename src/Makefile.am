@@ -17,6 +17,7 @@ biome1_SOURCES =       \
   newsplinemod.f90     \
   weathergenmod.f90    \
   diurnaltempmod.f90   \
+  airmassmod.f90       \
   radiationmod.f90     \
   soilwatermod.f90     \
   snowmod.f90          \

@@ -3,6 +3,14 @@ module insolationmod
 ! module with routines to calculate top of the atmosphere insolation
 ! based on subroutines and functions from the Laskar et al. (2004) insolation calculation programs (insolsub.f)
 
+! references:
+! Laskar, J., Robutel, P., Joutel, F., Gastineau, M., Correia, A. C. M., & Levrard, B. (2004). 
+!   A long-term numerical solution for the insolation quantities of the Earth. 
+!   Astronomy & Astrophysics, 428(1), 261-285. doi:10.1051/0004-6361:20041335
+! Laskar, J., Fienga, A., Gastineau, M., & Manche, H. (2011). 
+!   La2010: a new orbital solution for the long-term motion of the Earth. 
+!   Astronomy & Astrophysics, 532. doi:10.1051/0004-6361/201116836
+
 implicit none
 
 public  :: truelon
@@ -32,7 +40,7 @@ type(solarpars), intent(out) :: solar    ! structure with toa radiation, dayleng
 
 ! parameter
 
-real(dp), parameter :: TSI = 1361._dp  ! total solar irradiance
+real(dp), parameter :: TSI = 1361._dp  ! total solar irradiance or solar constant (W m-2)
 
 ! local variables
 
@@ -120,6 +128,7 @@ end if
 
 solar%rad0  = real(w)
 solar%dayl  = real(dayl)
+solar%phi   = real(phi)
 solar%delta = real(delta)
 
 end subroutine insol

@@ -144,6 +144,7 @@ end type orbitpars
 type solarpars
   real(sp) :: rad0     ! mean daily top-of-the-atmosphere insolation (W m-2)
   real(sp) :: dayl     ! day length (h)
+  real(sp) :: phi      ! latitude (rad)
   real(sp) :: delta    ! solar declination (rad)
 end type solarpars
 
@@ -195,15 +196,18 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: cldf  ! mean cloud cover fraction 0=clear sky, 1=overcast (fraction)
   real(sp) :: wind  ! wind speed (m s-1)
 
-  real(sp) :: tdew    ! estimated predawn dewpoint
+  real(sp) :: tdew    ! mean daily (24-hr) dewpoint temperature (degC)
   real(sp) :: tday    ! mean daytime temperature
   real(sp) :: tnight  ! mean nighttime temperature
   real(sp) :: wday    ! mean daytime windspeed
   real(sp) :: wnight  ! mean nighttime windspeed
 
   real(sp) :: rad0      ! top-of-atmosphere insolation (W m-2)
-  real(sp) :: rdirect   ! surface downwelling radiation, direct beam component (kJ m-2 d-1)
-  real(sp) :: rdiffuse  ! surface downwelling radiation, diffuse beam component (kJ m-2 d-1)
+  real(sp) :: rdirect   ! downwelling shortwave radiation, direct beam component (kJ m-2 d-1)
+  real(sp) :: rdiffuse  ! downwelling shortwave radiation, diffuse beam component (kJ m-2 d-1)
+  real(sp) :: swrad     ! downwelling shortwave radiation, daily mean (W m-2)
+  real(sp) :: lwday     ! downwelling longwave radiation, daytime mean (W m-2)
+  real(sp) :: lwnight   ! downwelling longwave radiation, nighttime mean (W m-2)
   real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
   real(sp) :: aet       ! actual evapotranspiration (mm)

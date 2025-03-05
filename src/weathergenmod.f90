@@ -57,19 +57,21 @@ real(sp), parameter :: gp_shape = 1.5 ! shape parameter for the Generalized Pare
 ! "A" matrix of present-day cross correlations among met variables (Richardson, 1984; Eqn. 4)
 
 real(sp),  dimension(4,4) :: A = reshape( &
-      [0.9161179,   0.48541803,  0.00353546,  0.01237203,  &
-       0.03119116,  0.13461942, -0.04303678, -0.04305549,  &
-      -0.01836789, -0.06865181,  0.59195356, -0.02017241,  &
-       0.00087781, -0.04650604,  0.02344410,  0.67185901], &
+        ! tmin         tmax         cloud     wind (sqrt)
+      [0.9161179,   0.48541803,  0.00353546,  0.01237203,  &  ! tmin
+       0.03119116,  0.13461942, -0.04303678, -0.04305549,  &  ! tmax
+      -0.01836789, -0.06865181,  0.59195356, -0.02017241,  &  ! cloud
+       0.00087781, -0.04650604,  0.02344410,  0.67185901], &  ! wind (sqrt)
 [4,4])
 
 ! "B" matrix of lag-1 cross correlations among met variables (Richardson, 1984; Eqn. 4)
 
 real(sp),  dimension(4,4) :: B = reshape( &
-      [0.35827493,  0.11247485,  0.14180909,  0.07727885,  &
-       0.        ,  0.80889378, -0.06030167, -0.01563132,  &
-       0.        ,  0.        ,  0.78463208,  0.06061359,  &
-       0.        ,  0.        ,  0.        ,  0.73288315], &
+        ! tmin         tmax         cloud     wind (sqrt)
+      [0.35827493,  0.11247485,  0.14180909,  0.07727885,  &  ! tmin
+       0.        ,  0.80889378, -0.06030167, -0.01563132,  &  ! tmax
+       0.        ,  0.        ,  0.78463208,  0.06061359,  &  ! cloud
+       0.        ,  0.        ,  0.        ,  0.73288315], &  ! wind (sqrt)
 [4,4])
 
 ! transition probabilites for rainfall occurrence (determined empirically)
@@ -462,6 +464,13 @@ end if
 if (tmax + Tfreeze < 0.) then
   write(0,*)'Unphysical max. temperature with ',tmax,'K from a monthly mean ',tmax_mn,'degC'
   stop
+end if
+
+if (tmin > tmax) then
+!   write(0,'(a,3f8.2)')'unphysical tmin-tmax',tmin,tmax,tmin-tmax
+  tmin = tmax + 0.5 * (tmin - tmax)
+  tmax = tmin
+!   write(0,*)'resetting',tmin,tmax
 end if
 
 wind = max(0.,wind)

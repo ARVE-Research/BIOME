@@ -106,7 +106,7 @@ else
   
   elif test "x$FC_REALNAME" = xgfortran; then
   
-    FCFLAGS="-O2 -ftree-vectorize -march=native -fno-math-errno -fPIC -ffree-line-length-none -fopenmp"
+    FCFLAGS="$FCFLAGS -O2 -ftree-vectorize -march=native -fno-math-errno -fPIC -ffree-line-length-none -fopenmp"
   
   fi
   

@@ -15,7 +15,8 @@ use calendarmod
 use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
 use physicsmod,      only : stdP
-use radiationmod,    only : initairmass,elev_corr,radpet,Pjj
+use airmassmod,      only : initairmass,elev_corr,Pjj
+use radiationmod,    only : radpet
 use soilwatermod,    only : calcwhc,soilwater
 use snowmod,         only : Tt
 
@@ -41,7 +42,8 @@ type(coordstype),      allocatable, dimension(:,:)   :: coords
 type(terraintype),     allocatable, dimension(:,:)   :: terrain
 type(dayclimatetype),  allocatable, dimension(:,:)   :: daily
 type(soilwatertype),   allocatable, dimension(:)     :: soilw
-type(metvars_daily),   allocatable, dimension(:,:)   :: dmet
+type(metvars_daily),   allocatable, dimension(:)     :: dmet   ! current day meteorology
+type(metvars_daily),   allocatable, dimension(:)     :: dmet1  ! next day meteorology
 type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
 type(monclimatetype),  allocatable, dimension(:,:,:) :: climate
 type(soiltype),        allocatable, dimension(:,:,:) :: soil
@@ -58,6 +60,7 @@ integer :: i
 integer :: j
 
 integer :: doy
+integer :: d1
 
 integer :: cntx
 integer :: cnty
@@ -79,6 +82,9 @@ real(dp) :: latr  ! geodesic latitude (radians)
 real(dp) :: latd  ! geodesic latitude (degrees)
 
 real(sp) :: albedo
+
+real(sp) :: dpd_day
+real(sp) :: dpd_night
 
 character(40) :: status_line
 
@@ -216,6 +222,7 @@ allocate(tmax(nmos))
 
 allocate(soilw(ncells))
 
+! ----------------------------------------------------------------------------------------------------------------
 ! interpolate selected monthly meteorological variables to means-preserving smooth daily estimates
 
 write(0,*)'calculate smoothed meteorology'
@@ -230,6 +237,7 @@ do i = 1,ncells
   
   call newspline(tmin,ndm,[tmin(nmos),tmin(1)],daily(i,:)%tmin)
   call newspline(tmax,ndm,[tmax(nmos),tmax(1)],daily(i,:)%tmax)
+    
   call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
   call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
   
@@ -247,7 +255,8 @@ deallocate(tmin)
 deallocate(tmax)
 
 allocate(met_in(ncells))
-allocate(dmet(ncells,2))  ! for the current and next day
+allocate(dmet(ncells))    ! for the current day
+allocate(dmet1(ncells))   ! for the next day
 
 ! initalize the random number generator
 
@@ -284,10 +293,71 @@ soilw%w = soilw%whc
 
 ! write(0,*)'initial soilw%w',soilw%w
 
-! ---------------------------------
-! initialization daily loop
+! ----------------------------------------------------------------------------------------------------------------
+! initialize first day meteorology
+! --- notes ---
+! model operation starts at sunrise on the first day of the year
+! daytime temperature reflects this day
+! nighttime temperature is temperature going into the following day
+! on the first day of operation, need to get the current and following day meteorology
+! after first day, move next day into current
+! -------------
 
-! 10 format(2i4,f8.3,f6.1,2f7.1,f7.3,f7.1,3f7.1,2f7.1,f7.1,2f10.1,f7.1)
+write(0,*)'start initialization day one'
+
+doy = 1  ! day of year counter
+
+m = 1
+d = 1
+    
+! calculate true solar longitude (for daylength)
+! only need to do this once per day, not for each cell
+
+slon = truelon(orbit,cal,doy)
+
+! loop over valid cells
+
+do i = 1,ncells
+
+  x = pixel(i)%x
+  y = pixel(i)%y
+  
+  latd = coords(x,y)%geolat
+  latr = latd * pir
+  
+  ! variable initializations
+
+  met_in(i)%prec = climate(x,y,m)%pre
+  met_in(i)%wetf = climate(x,y,m)%wet
+  met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
+
+  met_in(i)%tmin = daily(i,doy)%tmin
+  met_in(i)%tmax = daily(i,doy)%tmax
+  met_in(i)%cldf = daily(i,doy)%cld * 0.01
+  met_in(i)%wind = daily(i,doy)%wnd
+  
+  if (met_in(i)%tmin > met_in(i)%tmax) then
+    write(0,*)'unphysical tmin tmax'
+    write(0,*)met_in(i)%tmin,met_in(i)%tmax
+  end if
+
+  ! initialize daily meteorology for the current day, NB this is the only time this is called for the current day
+
+  call weathergen(met_in(i),dmet(i))
+  
+  ! write(*,'(i5,2f8.2)')doy,dmet(i)%tmin,dmet(i)%tmax
+  
+  ! calculate top-of-the-atmosphere insolation and daylength
+  
+  call insol(slon,orbit,latr,solar)
+  
+  dmet(i)%rad0 = solar%rad0
+  dmet(i)%dayl = solar%dayl
+
+end do
+
+! ----------------------------------------------------------------------------------------------------------------
+! initialization year loop
 
 write(0,*)'start initialization daily loop'
 
@@ -295,6 +365,9 @@ doy = 1  ! day of year counter
 
 do m = 1,nmos
   do d = 1,ndm(m)
+  
+    d1 = doy + 1
+    if (d1 > ndy) d1 = 1
   
     write(status_line,'(a,i0,a,i0)')' working on ',m,' ',d
     call overprint(status_line)
@@ -320,39 +393,50 @@ do m = 1,nmos
       met_in(i)%wetf = climate(x,y,m)%wet
       met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
 
-      met_in(i)%tmin = daily(i,doy)%tmin
-      met_in(i)%tmax = daily(i,doy)%tmax
-      met_in(i)%cldf = daily(i,doy)%cld * 0.01
-      met_in(i)%wind = daily(i,doy)%wnd
-
-      ! generate daily meteorology for all valid cells for one day
-
-      call weathergen(met_in(i),dmet(i,2))
+      met_in(i)%tmin = daily(i,d1)%tmin
+      met_in(i)%tmax = daily(i,d1)%tmax
+      met_in(i)%cldf = daily(i,d1)%cld * 0.01
+      met_in(i)%wind = daily(i,d1)%wnd
       
-      ! write(0,*)'WG:',dmet(i,2)%tmin,dmet(i,2)%tmax
+      if (met_in(i)%tmin > met_in(i)%tmax) then
+        write(0,*)'unphysical tmin tmax'
+        write(0,*)met_in(i)%tmin,met_in(i)%tmax
+      end if
 
+      ! generate daily meteorology for the next day (to have tmin for nighttime temperature)
+
+      call weathergen(met_in(i),dmet1(i))
+      
       ! calculate top-of-the-atmosphere insolation and daylength
       
       call insol(slon,orbit,latr,solar)
       
-      dmet(i,2)%rad0 = solar%rad0
-      dmet(i,2)%dayl = solar%dayl
-
-      ! dmet(:,1) = current day values, dmet(:,2) = next day day values
-      
-      dmet(i,:) = eoshift(dmet(i,:),-1,dmet(i,2))
-      
+      dmet(i)%rad0 = solar%rad0
+      dmet(i)%dayl = solar%dayl
+            
       ! calculate integrated day- and night-time temperature
+      ! nighttime is goes into the next day, need to know tmin of the next day
+      ! in situations of polar day, day temperature covers 23 hrs
+      ! in situations of polar night, day temperature covers 1 hr
 
-      call diurnaltemp(dmet(i,:))
+      call diurnaltemp(dmet(i),dmet1(i))
       
-      ! estimate dewpoint temperature 
-      
-      albedo = 0.17  ! shortwave albedo for vegetated surfaces. should vary in space and time; placeholder for now
+      ! shortwave albedo for vegetated surfaces. should vary by vegetation type, snow cover, and phenological state; placeholder for now
+      albedo = 0.17  
       
       ! surface radiation budget and potential evapotranspiration
   
-      call radpet(pixel(i),solar,albedo,dmet(i,1))
+      call radpet(pixel(i),solar,albedo,dmet(i))
+      
+      ! ----
+      
+      
+      
+      dpd_day   = dmet(i)%tday   - dmet(i)%tdew
+      dpd_night = dmet(i)%tnight - dmet(i)%tdew
+      
+      
+      ! write(*,'(3i5,8f8.2)')doy,d,m,dmet(i)%tdew,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
       
       ! snow dynamics
       
@@ -360,16 +444,22 @@ do m = 1,nmos
       
       ! soil water balance, including actual evapotranspiration and alpha
       
-      call soilwater(dmet(i,1),soilw(i))
+      call soilwater(dmet(i),soilw(i))
+
+      ! store today's meteorology for tomorrow
+
+      dmet(i) = dmet1(i)
 
     end do ! cells
 
     doy = doy + 1
     
+    if (doy > ndy) doy = 1
+    
   end do   ! days in the month
 end do     ! month
 
-! ---------------------------------
+! ----------------------------------------------------------------------------------------------------------------
 ! computation daily loop
 
 write(0,*)
@@ -384,6 +474,9 @@ doy = 1
 
 do m = 1,nmos
   do d = 1,ndm(m)
+  
+    d1 = doy + 1
+    if (d1 > ndy) d1 = 1
 
     write(status_line,'(a,i0,a,i0)')' working on ',m,' ',d
     call overprint(status_line)
@@ -404,14 +497,14 @@ do m = 1,nmos
       met_in(i)%wetf = climate(x,y,m)%wet
       met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
       
-      met_in(i)%tmin = daily(i,doy)%tmin
-      met_in(i)%tmax = daily(i,doy)%tmax
-      met_in(i)%cldf = daily(i,doy)%cld * 0.01
-      met_in(i)%wind = daily(i,doy)%wnd
+      met_in(i)%tmin = daily(i,d1)%tmin
+      met_in(i)%tmax = daily(i,d1)%tmax
+      met_in(i)%cldf = daily(i,d1)%cld * 0.01
+      met_in(i)%wind = daily(i,d1)%wnd
 
-      ! generate daily meteorology for all valid cells for one day
+      ! generate daily meteorology for next day
   
-      call weathergen(met_in(i),dmet(i,1))
+      call weathergen(met_in(i),dmet1(i))
       
       ! calculate daylength and insolation
       
@@ -419,38 +512,46 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      dmet(i,2)%rad0 = solar%rad0
-      dmet(i,2)%dayl = solar%dayl
-      
-      ! dmet(:,1) = current day values, dmet(:,2) = next day day values
-      
-      dmet(i,:) = eoshift(dmet(i,:),-1,dmet(i,2))
+      dmet(i)%rad0 = solar%rad0
+      dmet(i)%dayl = solar%dayl
       
       ! calculate integrated day- and night-time temperature
 
-      call diurnaltemp(dmet(i,:))
+      call diurnaltemp(dmet(i),dmet1(i))
+
+      ! write(*,'(i5,5f8.2)')doy+ndy,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin
       
       albedo = 0.17  ! shortwave albedo for vegetated surfaces, after Federer (1968) in Davis et al. (2017)
 
       ! calculate surface solar radiation and potential evapotranspiration
 
-      call radpet(pixel(i),solar,albedo,dmet(i,1))
+      call radpet(pixel(i),solar,albedo,dmet(i))
+
+      dpd_day   = dmet(i)%tday   - dmet(i)%tdew
+      dpd_night = dmet(i)%tnight - dmet(i)%tdew
+      
+      ! write(*,'(3i5,8f8.2)')doy+ndy,d,m,dmet(i)%tdew,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
      
       ! soil water balance, including actual evapotranspiration and alpha
 
-      call soilwater(dmet(i,1),soilw(i))
+      call soilwater(dmet(i),soilw(i))
       
       ! monthly summaries
 
-      mmet(i,m)%direct  = mmet(i,m)%direct  + dmet(i,1)%rdirect  / real(ndm(m))
-      mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet(i,1)%rdiffuse / real(ndm(m))
+      mmet(i,m)%direct  = mmet(i,m)%direct  + dmet(i)%rdirect  / real(ndm(m))
+      mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet(i)%rdiffuse / real(ndm(m))
 
-      mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i,1)%dpet
-      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i,1)%alpha / real(ndm(m))
+      mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i)%dpet
+      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i)%alpha / real(ndm(m))
+
+
+      dmet(i) = dmet1(i)
 
     end do ! cells
     
     doy = doy + 1
+    
+    if (doy > ndy) doy = 1
     
   end do   ! days in the month
 end do     ! month
