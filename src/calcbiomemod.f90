@@ -13,6 +13,8 @@ use typesmod,      only : pixeltype
 
 implicit none
 
+!This subroutine calculates the BIOME
+
 ! Choosing the plant types that are present
 ! The planttype array has 13 positions which the following plant types occupying the following positions:
 !  1 Tropical Evergreen
