@@ -4,7 +4,7 @@ use parametersmod
 use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
-use netcdfoutputmod, only : genoutputfile,writereal3d,closeoutput
+use netcdfoutputmod, only : genoutputfile,writereal3d,writeinteger2d,closeoutput
 use utilitymod,      only : bp2ce,leapyear,overprint
 use newsplinemod
 use orbitmod,        only : getorbitpars
@@ -19,6 +19,7 @@ use airmassmod,      only : initairmass,elev_corr,Pjj
 use radiationmod,    only : radpet
 use soilwatermod,    only : calcwhc,soilwater
 use snowmod,         only : Tt
+use calcbiomemod,    only : calcbiome
 
 implicit none
 
@@ -42,7 +43,7 @@ type(coordstype),      allocatable, dimension(:,:)   :: coords
 type(terraintype),     allocatable, dimension(:,:)   :: terrain
 type(dayclimatetype),  allocatable, dimension(:,:)   :: daily
 type(soilwatertype),   allocatable, dimension(:)     :: soilw
-type(metvars_daily),   allocatable, dimension(:)     :: dmet   ! current day meteorology
+type(metvars_daily),   allocatable, dimension(:)     :: dmet0  ! current day meteorology
 type(metvars_daily),   allocatable, dimension(:)     :: dmet1  ! next day meteorology
 type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
 type(monclimatetype),  allocatable, dimension(:,:,:) :: climate
@@ -180,10 +181,14 @@ do y = 1,cnty
 
     pixel(i)%elv = terrain(x,y)%elv
     
+    pixel(i)%slope  = 0. ! terrain(x,y)%slope
+    pixel(i)%aspect = 0. ! terrain(x,y)%aspect
+    
     ! mean temperature of the coldest month
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
-    
+    pixel(i)%twm = maxval(climate(x,y,:)%tmp)
+
     ! precipitation equitability index, used in airmass calculations for surface radiation
     
     pixel(i)%Pann = sum(climate(x,y,:)%pre)
@@ -255,7 +260,7 @@ deallocate(tmin)
 deallocate(tmax)
 
 allocate(met_in(ncells))
-allocate(dmet(ncells))    ! for the current day
+allocate(dmet0(ncells))    ! for the current day
 allocate(dmet1(ncells))   ! for the next day
 
 ! initalize the random number generator
@@ -279,15 +284,15 @@ do i = 1,4
   met_in%resid(i) = 0.
 end do
 
-dmet%tmin = 0.
-dmet%tmax = 0.
-dmet%prec = 0.
-dmet%cldf = 0.
-dmet%wind = 0.
-dmet%rad0 = 0.
-dmet%dayl = 0.
-dmet%tday = 0.
-dmet%tnight= 0.
+dmet0%tmin = 0.
+dmet0%tmax = 0.
+dmet0%prec = 0.
+dmet0%cldf = 0.
+dmet0%wind = 0.
+dmet0%rad0 = 0.
+dmet0%dayl = 0.
+dmet0%tday = 0.
+dmet0%tnight= 0.
 
 soilw%w = soilw%whc
 
@@ -343,16 +348,18 @@ do i = 1,ncells
 
   ! initialize daily meteorology for the current day, NB this is the only time this is called for the current day
 
-  call weathergen(met_in(i),dmet(i))
+  call weathergen(met_in(i),dmet0(i))
   
-  ! write(*,'(i5,2f8.2)')doy,dmet(i)%tmin,dmet(i)%tmax
+  ! write(*,'(i5,2f8.2)')doy,dmet0(i)%tmin,dmet0(i)%tmax
   
   ! calculate top-of-the-atmosphere insolation and daylength
   
   call insol(slon,orbit,latr,solar)
   
-  dmet(i)%rad0 = solar%rad0
-  dmet(i)%dayl = solar%dayl
+  pixel(i)%phi   = solar%phi
+  dmet0(i)%delta = solar%delta
+  dmet0(i)%rad0  = solar%rad0
+  dmet0(i)%dayl  = solar%dayl
 
 end do
 
@@ -411,32 +418,33 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      dmet(i)%rad0 = solar%rad0
-      dmet(i)%dayl = solar%dayl
+      dmet0(i)%delta = solar%delta
+      dmet0(i)%rad0  = solar%rad0
+      dmet0(i)%dayl  = solar%dayl
             
       ! calculate integrated day- and night-time temperature
       ! nighttime is goes into the next day, need to know tmin of the next day
       ! in situations of polar day, day temperature covers 23 hrs
       ! in situations of polar night, day temperature covers 1 hr
 
-      call diurnaltemp(dmet(i),dmet1(i))
+      call diurnaltemp(dmet0(i),dmet1(i))
       
       ! shortwave albedo for vegetated surfaces. should vary by vegetation type, snow cover, and phenological state; placeholder for now
       albedo = 0.17  
       
       ! surface radiation budget and potential evapotranspiration
   
-      call radpet(pixel(i),solar,albedo,dmet(i))
+      call radpet(pixel(i),solar,albedo,dmet0(i))
       
       ! ----
       
       
       
-      dpd_day   = dmet(i)%tday   - dmet(i)%tdew
-      dpd_night = dmet(i)%tnight - dmet(i)%tdew
+      ! dpd_day   = dmet0(i)%tday   - dmet0(i)%tdew
+      ! dpd_night = dmet0(i)%tnight - dmet0(i)%tdew
       
       
-      ! write(*,'(3i5,8f8.2)')doy,d,m,dmet(i)%tdew,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
+      ! write(*,'(3i5,8f8.2)')doy,d,m,dmet0(i)%tdew,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
       
       ! snow dynamics
       
@@ -444,11 +452,11 @@ do m = 1,nmos
       
       ! soil water balance, including actual evapotranspiration and alpha
       
-      call soilwater(dmet(i),soilw(i))
+      call soilwater(dmet0(i),soilw(i))
 
       ! store today's meteorology for tomorrow
 
-      dmet(i) = dmet1(i)
+      dmet0(i) = dmet1(i)
 
     end do ! cells
 
@@ -470,6 +478,9 @@ mmet%alpha = 0.
 mmet%direct  = 0.
 mmet%diffuse = 0.
 
+pixel%gdd0 = 0.
+pixel%gdd5 = 0.
+
 doy = 1
 
 do m = 1,nmos
@@ -481,7 +492,7 @@ do m = 1,nmos
     write(status_line,'(a,i0,a,i0)')' working on ',m,' ',d
     call overprint(status_line)
 
-    ! calculate true solar longitude for daylength, 
+    ! calculate true solar longitude (position in earth's orbit around the sun) for daylength, 
     ! only need to do this once per day, not for each cell
     
     slon = truelon(orbit,cal,doy)
@@ -512,40 +523,43 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      dmet(i)%rad0 = solar%rad0
-      dmet(i)%dayl = solar%dayl
+      dmet0(i)%delta = solar%delta
+      dmet0(i)%rad0  = solar%rad0
+      dmet0(i)%dayl  = solar%dayl
       
       ! calculate integrated day- and night-time temperature
 
-      call diurnaltemp(dmet(i),dmet1(i))
+      call diurnaltemp(dmet0(i),dmet1(i))
 
-      ! write(*,'(i5,5f8.2)')doy+ndy,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin
+      ! write(*,'(i5,5f8.2)')doy+ndy,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin
       
       albedo = 0.17  ! shortwave albedo for vegetated surfaces, after Federer (1968) in Davis et al. (2017)
 
       ! calculate surface solar radiation and potential evapotranspiration
 
-      call radpet(pixel(i),solar,albedo,dmet(i))
+      call radpet(pixel(i),solar,albedo,dmet0(i))
 
-      dpd_day   = dmet(i)%tday   - dmet(i)%tdew
-      dpd_night = dmet(i)%tnight - dmet(i)%tdew
+      ! dpd_day   = dmet0(i)%tday   - dmet0(i)%tdew
+      ! dpd_night = dmet0(i)%tnight - dmet0(i)%tdew
       
-      ! write(*,'(3i5,8f8.2)')doy+ndy,d,m,dmet(i)%tdew,dmet(i)%tmin,dmet(i)%tday,dmet(i)%tmax,dmet(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
+      ! write(*,'(3i5,8f8.2)')doy+ndy,d,m,dmet0(i)%tdew,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
      
       ! soil water balance, including actual evapotranspiration and alpha
 
-      call soilwater(dmet(i),soilw(i))
+      call soilwater(dmet0(i),soilw(i))
       
       ! monthly summaries
 
-      mmet(i,m)%direct  = mmet(i,m)%direct  + dmet(i)%rdirect  / real(ndm(m))
-      mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet(i)%rdiffuse / real(ndm(m))
+      mmet(i,m)%direct  = mmet(i,m)%direct  + dmet0(i)%rdirect  / real(ndm(m))
+      mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet0(i)%rdiffuse / real(ndm(m))
 
-      mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet(i)%dpet
-      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet(i)%alpha / real(ndm(m))
+      mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet0(i)%dpet
+      mmet(i,m)%alpha = mmet(i,m)%alpha + dmet0(i)%alpha / real(ndm(m))
 
+      pixel(i)%gdd5 = pixel(i)%gdd5 + max(dmet0(i)%tday - 5.,0.)
+      pixel(i)%gdd0 = pixel(i)%gdd0 + max(dmet0(i)%tday,0.)
 
-      dmet(i) = dmet1(i)
+      dmet0(i) = dmet1(i)
 
     end do ! cells
     
@@ -558,6 +572,17 @@ end do     ! month
 
 write(0,*)
 
+! ----
+! calculate annual alpha and biome
+
+do i = 1,ncells
+
+  pixel(i)%aalpha = sum(mmet(i,:)%alpha) / 12.
+
+  call calcbiome(pixel(i))
+
+end do
+
 ! ---------------------------------
 ! write model output
 
@@ -568,6 +593,8 @@ call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
+
+call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 
 ! ---------------------------------
 

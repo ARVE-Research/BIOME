@@ -34,6 +34,10 @@ type(solarpars),     intent(in)    :: solar
 real(sp),            intent(in)    :: albedo  ! surface shortwave albedo
 type(metvars_daily), intent(inout) :: dmet    ! daily meteorological variables
 
+! parameter
+
+real(sp) :: pisec = 86400. / pi
+
 ! local variables
 
 real(dp) :: lat   ! latitude (degrees)
@@ -69,21 +73,24 @@ real(sp) :: dpet    ! day potential evapotranspiraton (mm)
 real(sp) :: tmin
 real(sp) :: tmax
 
-real(sp) :: phi
-real(sp) :: slope
-real(sp) :: aspect
+real(sp) :: phi     ! latitude (rad)
+real(sp) :: slope   ! slope (rad)
+real(sp) :: aspect  ! aspect (rad)
 real(sp) :: hs      ! hour angle of sunset (rad)
+real(sp) :: hn      ! cross-over hour angle of for radiation? (rad)
 real(sp) :: sinh
 real(sp) :: ru
 real(sp) :: rv
 real(sp) :: rw
 real(sp) :: sw
 
-real(sp) :: Ilw
+! real(sp) :: Ilw
 real(sp) :: Hnpos
 real(sp) :: Hnneg
 
 real(sp) :: sunf
+
+real(sp) :: lwterm
 
 ! counters
 
@@ -91,9 +98,9 @@ integer :: i
 
 ! ----------------------------------------------------------------------------------
 
-rad0  = solar%rad0
-dayl  = solar%dayl
-delta = solar%delta / pir    ! convert radians to degrees
+rad0   = dmet%rad0
+dayl   = dmet%dayl
+delta  = dmet%delta
 
 tmin = dmet%tmin
 tmax = dmet%tmax
@@ -101,16 +108,17 @@ tday = dmet%tday
 cldf = dmet%cldf
 prec = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night
 
-lat  = pixel%lat
-elv  = pixel%elv
+lat    = pixel%lat
+elv    = pixel%elv
+phi    = pixel%phi
+slope  = pixel%slope
+aspect = pixel%aspect
+
 tcm  = pixel%tcm
 Pjj  = pixel%Pjj
 Pann = pixel%Pann
 Ratm = pixel%Ratm
 P    = pixel%P
-
-phi = solar%phi
-delta = solar%delta
 
 ru = sin(delta) * sin(phi)
 rv = cos(delta) * cos(phi)
@@ -130,7 +138,7 @@ toa_sw = rad0 ! * dayl * 3.6
 
 ! calculate the airmass based on latitude, solar declination, daylength, and relative pressure
 
-call airmass(lat,delta,dayl,Ratm,air)
+call airmass(lat,delta/pir,dayl,Ratm,air)
 
 ! iterate to estimate dewpoint, shortwave and longwave radiation, net radiation, and potential evapotranspiration
 
@@ -143,19 +151,39 @@ dpet = pet0
 
 do
 
-  tdew = dewpoint(tmin,tmax,dpet,Pann)
-
   call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,dpet,direct,diffuse,sw_rad)
-
+  
   sunf = sf(elv,rad0,sw_rad)
- 
+  
   call surf_lw2(sunf,tday,lw_rad)
+
+  rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+  
+  lwterm = (lw_rad - rw * ru) / (rw * rv)
+  
+  if (lwterm <= -1.) then
+    hn = pi
+  else if (lwterm >= 1.) then
+    hn = 0
+  else
+    hn = acos(lwterm)
+  end if
+  
+  Hnpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
+  
+  Hnneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
+  
+  ! Isw = sw_rad * (1. - albedo)
+
+  ! netrad = Isw - lw_rad
+  
+  call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
  
   ! call surf_lw(tday,tdew,cldf,lw_rad)
   
-  call netrad_pet(sw_rad,lw_rad,albedo,P,tday,netrad,dpet)
+  ! call netrad_pet(sw_rad,lw_rad,albedo,P,tday,netrad,dpet)
   
-  write(0,*)i,hs,cldf,sunf,tday,rad0,direct,diffuse,sw_rad,lw_rad,netrad,dpet
+  ! write(0,*)i,hs,cldf,sunf,tday,rad0,direct,diffuse,sw_rad,lw_rad,Hnpos,Hnneg,dpet
 
   ! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
 
@@ -166,6 +194,10 @@ do
   i = i + 1
 
 end do
+
+dmet%rdirect  = direct
+dmet%rdiffuse = diffuse
+dmet%dpet     = dpet
 
 ! night timestep
 
@@ -418,6 +450,48 @@ real(sp), parameter :: k4 =  0.088
 lw_rad = (k4 + (1. - k3) * sunf) * (k1 + k2 * Tair)
 
 end subroutine surf_lw2
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine pet(P,Tair,lw_rad,ru,rv,rw,hn,dpet)
+
+use parametersmod, only : sp,pi => pi_sp
+use physicsmod,    only : Econ
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: lw_rad  ! mean longwave radiation (W m-2)
+real(sp), intent(in)  :: ru      ! 
+real(sp), intent(in)  :: rv      ! 
+real(sp), intent(in)  :: rw      ! 
+real(sp), intent(in)  :: hn      ! 
+real(sp), intent(out) :: dpet    ! potential evapotranspiration (mm d-1)
+
+! parameters
+
+real(sp), parameter :: Sc    = 1.05  ! maximum potential evapotranspiration supply rate (mm h-1) Davis et al (2017)
+real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
+
+! local variables
+
+real(sp) :: hi
+real(sp) :: rx
+
+! ----
+
+! write(0,*)P,Tair
+
+hi = 0.
+
+rx = 3.6e6 * (1. + omega) * Econ(P,Tair) / 1000.
+
+dpet = 24. / pi * (Sc * hi + rx * rw * rv * (sin(hn) - sin(hi)) + (rx * rw * ru - rx * lw_rad) * (hn - hi))
+
+end subroutine pet
 
 ! ----------------------------------------------------------------------------------------------------------------
 

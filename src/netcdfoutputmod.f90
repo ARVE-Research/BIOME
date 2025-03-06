@@ -452,6 +452,128 @@ end subroutine writereal3d
 
 ! -----------------------------------------------------
 
+subroutine writereal2d(ofid,gridinfo,pixel,varname,ovar)
+
+use parametersmod, only : sp,i2,imissing
+use typesmod,      only : gridinfotype,pixeltype,metvars_monthly
+use netcdf
+use errormod,      only : ncstat,netcdf_err
+
+implicit none
+
+! arguments
+
+integer,                       intent(in) :: ofid
+type(gridinfotype),            intent(in) :: gridinfo
+type(pixeltype), dimension(:), intent(in) :: pixel
+character(*),                  intent(in) :: varname
+real(sp), dimension(:),        intent(in) :: ovar
+
+! local variables
+
+integer :: cntx
+integer :: cnty
+
+integer :: n
+integer :: i
+integer :: x
+integer :: y
+
+integer :: varid
+
+integer(sp), allocatable, dimension(:,:) :: mvar
+
+! ----
+
+cntx = gridinfo%cntx
+cnty = gridinfo%cnty
+
+allocate(mvar(cntx,cnty))
+
+mvar = imissing
+
+n = size(pixel)
+
+do i = 1,n
+
+  x = pixel(i)%x
+  y = pixel(i)%y
+  
+  mvar(x,y) = ovar(i)
+
+end do
+
+ncstat = nf90_inq_varid(ofid,varname,varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,mvar)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end subroutine writereal2d
+
+! -----------------------------------------------------
+
+subroutine writeinteger2d(ofid,gridinfo,pixel,varname,ovar)
+
+use parametersmod, only : sp,i2,imissing
+use typesmod,      only : gridinfotype,pixeltype,metvars_monthly
+use netcdf
+use errormod,      only : ncstat,netcdf_err
+
+implicit none
+
+! arguments
+
+integer,                       intent(in) :: ofid
+type(gridinfotype),            intent(in) :: gridinfo
+type(pixeltype), dimension(:), intent(in) :: pixel
+character(*),                  intent(in) :: varname
+integer(i2), dimension(:),      intent(in) :: ovar
+
+! local variables
+
+integer :: cntx
+integer :: cnty
+
+integer :: n
+integer :: i
+integer :: x
+integer :: y
+
+integer :: varid
+
+integer(sp), allocatable, dimension(:,:) :: mvar
+
+! ----
+
+cntx = gridinfo%cntx
+cnty = gridinfo%cnty
+
+allocate(mvar(cntx,cnty))
+
+mvar = imissing
+
+n = size(pixel)
+
+do i = 1,n
+
+  x = pixel(i)%x
+  y = pixel(i)%y
+  
+  mvar(x,y) = ovar(i)
+
+end do
+
+ncstat = nf90_inq_varid(ofid,varname,varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,mvar)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end subroutine writeinteger2d
+
+! -----------------------------------------------------
+
 subroutine closeoutput(ofid)
 
 use netcdf

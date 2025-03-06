@@ -2,7 +2,7 @@ module typesmod
 
 ! repository of derived types
 
-use parametersmod, only : sp,dp,nmos
+use parametersmod, only : i2,sp,dp,nmos
 use randomdistmod, only : randomstate
 
 implicit none
@@ -42,17 +42,27 @@ end type coordstype
 ! ---
 
 type pixeltype
-  integer :: x
-  integer :: y
-  real(dp) :: lon
-  real(dp) :: lat
-  real(sp) :: elv  ! elevation (m)
-  real(sp) :: P    ! mean atmospheric pressure (Pa)
-  real(sp) :: Ratm ! relative atmospheric pressure
-  real(sp) :: tcm  ! temperature of the coldest month
-  real(sp) :: Pann ! total annual precipitation
-  real(sp) :: Pjj  ! precipitation equitability index
-  real(sp) :: Tt   ! snow probability temperature (degC)
+  integer :: x       ! x position on 2D grid
+  integer :: y       ! y position on 2D grid
+  real(dp) :: lon    ! longitude (deg)
+  real(dp) :: lat    ! latitude (deg)
+  real(sp) :: phi    ! latitude (rad)
+  real(sp) :: elv    ! elevation (m)
+  real(sp) :: P      ! mean atmospheric pressure (Pa)
+  real(sp) :: Ratm   ! relative atmospheric pressure
+  real(sp) :: tcm    ! temperature of the coldest month
+  real(sp) :: Pann   ! total annual precipitation
+  real(sp) :: Pjj    ! precipitation equitability index
+  real(sp) :: Tt     ! snow probability temperature (degC)
+  real(sp) :: slope  ! median slope inclination (rad)
+  real(sp) :: aspect ! median slope orientation (rad), 0 = S, values increasing clockwise
+  real(sp) :: twm    ! temperature of the warmest month (degC)
+  real(sp) :: gdd5   ! growing degree days on a 5-degree base (degC)
+  real(sp) :: gdd0   ! growing degree days on a 0-degree base (degC)
+  real(sp) :: aalpha ! mean annual alpha (fraction)
+
+  integer(i2) :: biome
+  
   ! logical :: valid
   ! integer, dimension(8) :: neighbors
 end type pixeltype
@@ -61,8 +71,6 @@ end type pixeltype
 
 type terraintype
   real(sp) :: elv
-  real(sp) :: slope
-  real(sp) :: aspect
   real(sp) :: cti
   real(sp) :: landf
   real(sp) :: waterf
@@ -142,10 +150,10 @@ end type orbitpars
 ! ---
 
 type solarpars
-  real(sp) :: rad0     ! mean daily top-of-the-atmosphere insolation (W m-2)
-  real(sp) :: dayl     ! day length (h)
-  real(sp) :: phi      ! latitude (rad)
-  real(sp) :: delta    ! solar declination (rad)
+  real(sp) :: rad0   ! mean daily top-of-the-atmosphere insolation (W m-2)
+  real(sp) :: dayl   ! day length (h)
+  real(sp) :: phi    ! latitude (rad)
+  real(sp) :: delta  ! solar declination (rad)
 end type solarpars
 
 ! ---
@@ -188,19 +196,20 @@ type metvars_daily  ! structure for weather generator output (daily)
 
   ! basic output
 
-  real(sp) :: dayl  ! daylength (h)
+  real(sp) :: delta     ! solar declination (rad)
+  real(sp) :: dayl      ! daylength (h)
 
-  real(sp) :: prec  ! total precipitation (mm)
-  real(sp) :: tmin  ! minimum temperature (degC)
-  real(sp) :: tmax  ! maximum temperature (degC)
-  real(sp) :: cldf  ! mean cloud cover fraction 0=clear sky, 1=overcast (fraction)
-  real(sp) :: wind  ! wind speed (m s-1)
+  real(sp) :: prec      ! total precipitation (mm)
+  real(sp) :: tmin      ! minimum temperature (degC)
+  real(sp) :: tmax      ! maximum temperature (degC)
+  real(sp) :: cldf      ! mean cloud cover fraction 0=clear sky, 1=overcast (fraction)
+  real(sp) :: wind      ! wind speed (m s-1)
 
-  real(sp) :: tdew    ! mean daily (24-hr) dewpoint temperature (degC)
-  real(sp) :: tday    ! mean daytime temperature
-  real(sp) :: tnight  ! mean nighttime temperature
-  real(sp) :: wday    ! mean daytime windspeed
-  real(sp) :: wnight  ! mean nighttime windspeed
+  real(sp) :: tdew      ! mean daily (24-hr) dewpoint temperature (degC)
+  real(sp) :: tday      ! mean daytime temperature
+  real(sp) :: tnight    ! mean nighttime temperature
+  real(sp) :: wday      ! mean daytime windspeed
+  real(sp) :: wnight    ! mean nighttime windspeed
 
   real(sp) :: rad0      ! top-of-atmosphere insolation (W m-2)
   real(sp) :: rdirect   ! downwelling shortwave radiation, direct beam component (kJ m-2 d-1)
@@ -213,9 +222,9 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet
   
-  real(sp) :: dsnow    ! snow depth (cm)
-  real(sp) :: psnow    ! snow density ()
-  real(sp) :: asnow    ! snow depth (cm)
+  real(sp) :: dsnow     ! snow depth (cm)
+  real(sp) :: psnow     ! snow density ()
+  real(sp) :: asnow     ! snow depth (cm)
   
   ! diagnostic output, uncomment this section as needed
 

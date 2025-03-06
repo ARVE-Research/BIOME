@@ -22,6 +22,7 @@ subroutine diurnaltemp(met,met1)
 
 use parametersmod, only : i4,sp,pi
 use typesmod,      only : metvars_daily
+use utilitymod,    only : roundto
 
 implicit none
 
@@ -147,8 +148,8 @@ tday = (tam + tpm) / 2.
 
 ! ---
 
-met%tday   = tday
-met%tnight = tnight
+met%tday   = roundto(tday,1)
+met%tnight = roundto(tnight,1)
 
 end subroutine diurnaltemp
 
