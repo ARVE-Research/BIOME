@@ -77,7 +77,7 @@ real(sp) :: phi     ! latitude (rad)
 real(sp) :: slope   ! slope (rad)
 real(sp) :: aspect  ! aspect (rad)
 real(sp) :: hs      ! hour angle of sunset (rad)
-real(sp) :: hn      ! cross-over hour angle of for radiation? (rad)
+real(sp) :: hn      ! net radiation cross-over hour angle (rad)
 real(sp) :: sinh
 real(sp) :: ru
 real(sp) :: rv

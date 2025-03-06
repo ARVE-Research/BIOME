@@ -305,9 +305,27 @@ ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
+! annual mean alpha
+
+ncstat = nf90_def_var(ofid,'aalpha',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','mean annual ratio of AET to PET')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','fraction')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
 ! biome (category)
 
-ncstat = nf90_def_var(ofid,'biome',nf90_short,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+ncstat = nf90_def_var(ofid,'biome',nf90_short,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.true.)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ncstat = nf90_put_att(ofid,varid,'long_name','biome')
@@ -454,7 +472,7 @@ end subroutine writereal3d
 
 subroutine writereal2d(ofid,gridinfo,pixel,varname,ovar)
 
-use parametersmod, only : sp,i2,imissing
+use parametersmod, only : sp,i2,rmissing
 use typesmod,      only : gridinfotype,pixeltype,metvars_monthly
 use netcdf
 use errormod,      only : ncstat,netcdf_err
@@ -481,7 +499,7 @@ integer :: y
 
 integer :: varid
 
-integer(sp), allocatable, dimension(:,:) :: mvar
+real(sp), allocatable, dimension(:,:) :: mvar
 
 ! ----
 
@@ -490,7 +508,7 @@ cnty = gridinfo%cnty
 
 allocate(mvar(cntx,cnty))
 
-mvar = imissing
+mvar = rmissing
 
 n = size(pixel)
 
@@ -528,7 +546,7 @@ integer,                       intent(in) :: ofid
 type(gridinfotype),            intent(in) :: gridinfo
 type(pixeltype), dimension(:), intent(in) :: pixel
 character(*),                  intent(in) :: varname
-integer(i2), dimension(:),      intent(in) :: ovar
+integer(i2), dimension(:),     intent(in) :: ovar
 
 ! local variables
 

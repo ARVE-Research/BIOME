@@ -222,6 +222,10 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet
   
+  real(sp) :: rain
+  real(sp) :: snow
+  real(sp) :: melt
+
   real(sp) :: dsnow     ! snow depth (cm)
   real(sp) :: psnow     ! snow density ()
   real(sp) :: asnow     ! snow depth (cm)

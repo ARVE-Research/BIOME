@@ -103,6 +103,11 @@ real(sp) :: demand  ! water demand (mm)
 
 ! -----
 
+dmet%rain = dmet%prec
+dmet%melt = 0.
+
+! ----
+
 Emd = etmax * dmet%dayl
 
 if (soilw%whc > 0. .and. soilw%w > 0.) then
@@ -119,7 +124,7 @@ dmet%aet = min(supply,demand)
 
 if (soilw%w < 1.e-5) soilw%w = 0.
 
-soilw%w = min(soilw%w + (dmet%prec - dmet%aet),soilw%whc)
+soilw%w = min(soilw%w + (dmet%rain + dmet%melt - dmet%aet),soilw%whc)
 
 if (demand > 0.) then
   dmet%alpha = dmet%aet / dmet%dpet

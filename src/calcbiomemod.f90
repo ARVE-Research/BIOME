@@ -180,7 +180,6 @@ if (planttype(4) .and. planttype(5) .and. planttype(7)) then
   return
 end if 
 
-
 if (planttype(5) .and. planttype(6) .and. planttype(7) .and. .not. planttype(4)) then 
   pixel%biome = 7
   return
@@ -219,9 +218,9 @@ end if
 
 if (planttype(11)) then
   if (.not. planttype(10)) then 
-  pixel%biome = 14
+    pixel%biome = 14
   else 
-  pixel%biome = 13
+    pixel%biome = 13
   end if
   return
 end if

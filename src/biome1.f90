@@ -4,7 +4,7 @@ use parametersmod
 use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
-use netcdfoutputmod, only : genoutputfile,writereal3d,writeinteger2d,closeoutput
+use netcdfoutputmod
 use utilitymod,      only : bp2ce,leapyear,overprint
 use newsplinemod
 use orbitmod,        only : getorbitpars
@@ -594,6 +594,7 @@ call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
 
+call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 
 ! ---------------------------------
