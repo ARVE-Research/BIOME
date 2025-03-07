@@ -70,10 +70,14 @@ if (tcm >= 15.5) then
 end if
 
 if (tcm >= 5.0) then
-  if (alpha >= 0.65) then
+  if (alpha >= 0.43) then
     planttype(3) = .true.
   end if
 end if
+
+
+!Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
+
 
 if (tcm >= -15 .and. tcm <=15.5) then
   if (GDD >= 1200) then
@@ -114,7 +118,7 @@ if (tcm >= 5) then
 end if
 
 if (twm >= 22) then
-  if (alpha >= 0.18) then
+  if (alpha >= 0.08) then
   planttype(9) = .true.
   end if
 end if
@@ -201,6 +205,9 @@ if (planttype(7) .and. .not. any(planttype(4:6))) then
   pixel%biome = 10
   return
 end if
+
+
+! I am swapping the order of dominance class #4 and #5 because biome 11 is being inferred in areas where biome #12 should be present. 
 
 ! dominance class 4; planttype #8
 
