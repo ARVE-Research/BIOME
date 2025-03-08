@@ -11,7 +11,7 @@ contains
 
 ! ---------------------------------------------------------
 
-subroutine diurnaltemp(met,met1)
+subroutine diurnaltemp(met0,met1)
 
 ! Based on: 
 ! Cesaraccio, C., Spano, D., Duce, P., & Snyder, R. L. (2001). 
@@ -28,7 +28,7 @@ implicit none
 
 ! arguments
 
-type(metvars_daily), intent(inout) :: met   ! meteorological variables of the current day
+type(metvars_daily), intent(inout) :: met0  ! meteorological variables of the current day
 type(metvars_daily), intent(in)    :: met1  ! meteorological variables of the next day, only used to set next-day (predawn) tmin
 
 ! parameter
@@ -73,11 +73,11 @@ real(sp) :: ti1   ! midnight to sunrise
 
 ! -------------------------
 
-dayl0 = met%dayl   ! current day daylength
+dayl0 = met0%dayl   ! current day daylength
 dayl1 = met1%dayl  ! next day daylength
-tmin0 = met%tmin   ! temperature at sunrise of the current day
+tmin0 = met0%tmin   ! temperature at sunrise of the current day
 tmin1 = met1%tmin  ! temperature at sunrise of the next day
-tmax  = met%tmax   ! daytime maximum temperature
+tmax  = met0%tmax   ! daytime maximum temperature
 
 ! to separate daytime and nighttime: (Leo Lai May 2019)
 ! define daylength of polar night to be 1 hour
@@ -148,8 +148,8 @@ tday = (tam + tpm) / 2.
 
 ! ---
 
-met%tday   = roundto(tday,1)
-met%tnight = roundto(tnight,1)
+met0%tday   = roundto(tday,1)
+met0%tnight = roundto(tnight,1)
 
 end subroutine diurnaltemp
 

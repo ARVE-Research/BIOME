@@ -8,6 +8,108 @@ contains
 
 ! ---------------------------------------
 
+subroutine snow(pixel,dmet)
+
+! calculate daily snow dynamics
+
+use parametersmod, only : sp,B0
+use typesmod,      only : pixeltype,metvars_daily
+
+implicit none
+
+! arguments
+
+type(pixeltype),     intent(in)    :: pixel
+type(metvars_daily), intent(inout) :: dmet    ! daily meteorological variables
+
+! parameters
+
+real(sp), parameter :: k11   =   0.443
+real(sp), parameter :: k12   =   0.895
+real(sp), parameter :: swec  = 140.     ! minimum snow-water equivalent for full snow cover (Sandoval et al., 2024)
+real(sp), parameter :: B0snw =   0.85   ! albedo of fresh snow
+
+! local variables
+
+real(sp) :: snowd
+real(sp) :: snown
+real(sp) :: Bsnw
+
+! ----
+! snowfall
+
+if (dmet%prec > 0.) then
+
+  dmet%prday = dmet%prec * dmet%dayl / 24.
+  dmet%prnight = dmet%prec - dmet%prday
+
+  ! day
+
+  dmet%rain = dmet%prday * frain(dmet%tday,pixel%Tt)
+  snowd = dmet%prday - dmet%rain
+  
+  if (snowd > 0.) dmet%swe = dmet%swe + dmet%snow
+  
+  ! night
+  
+  dmet%rain = dmet%prnight * frain(dmet%tnight,pixel%Tt)
+  snown = dmet%prnight - dmet%rain
+
+  if (snown > 0.) dmet%swe = dmet%swe + dmet%snow
+
+  ! --
+
+  dmet%snow = snowd + snown
+
+end if
+ 
+! snowmelt - should separate into day and night parts
+
+dmet%melt = snowmelt(pixel%P,dmet%tday,dmet%swe,dmet%HNpos)
+
+! snowpack accounting
+
+dmet%swe = max(dmet%swe - dmet%melt,0.)
+
+! snow cover fraction
+
+dmet%fsnow = dmet%swe / (swec + dmet%swe)  ! eqn. 27
+
+! snowpack age and albedo
+
+if (dmet%swe > 0.) then
+  if (dmet%snow >= 3.) then
+    dmet%asnow = 0
+  else
+    dmet%asnow = dmet%asnow + 1
+  end if
+  
+!   if (dmet%asnow < 0 .or. dmet%asnow > 90) then 
+!     write(0,*)dmet%asnow
+!   end if
+  
+  dmet%asnow = min(dmet%asnow,90)
+
+  Bsnw = (B0snw - k11) + k11 * exp(-k12 * real(dmet%asnow))  ! eqn. 26
+  
+  dmet%Bsw = B0 * (1. - dmet%fsnow) + (dmet%fsnow * Bsnw)   ! eqn. 25
+
+else
+
+  dmet%asnow = 0
+  
+  dmet%Bsw = B0
+
+end if
+
+if (dmet%Bsw < 0. .or. dmet%Bsw > 1.) then
+  write(0,*)'albedo error',B0,Bsnw,dmet%fsnow
+end if
+
+end subroutine snow
+
+! ---------------------------------------
+
 real(sp) function Tt(z,phi)
 
 ! function to assess the threshold temperature for snowfall based on a 50% probability
@@ -29,9 +131,13 @@ real(sp), parameter :: k8  = 1.0473543991   !  1.319
 real(sp), parameter :: k9  = 0.0004596581   ! -4.18e-4
 real(sp), parameter :: k10 = 0.0110592101   ! -1.140e-2
 
+real(sp) :: alat
+
 ! ----
 
-Tt = (k7 + k9 * z + k10 * abs(phi)) / k8
+alat = real(abs(phi))
+
+Tt = (k7 + k9 * z + k10 * alat) / k8
 
 end function Tt
 
@@ -75,7 +181,7 @@ end function frain
 
 ! ---------------------------------------
 
-real(sp) function snowmelt(P,temp,SWE,Rnet)
+real(sp) function snowmelt(P,temp,SWE,HNpos)
 
 ! Sandoval et al. (2024) eqn. 21, output units mm d-1
 
@@ -89,7 +195,7 @@ implicit none
 real(sp), intent(in) :: P     ! mean air pressure (Pa)
 real(sp), intent(in) :: temp  ! temperature (degC)
 real(sp), intent(in) :: SWE   ! snow-water equivalent (mm)
-real(sp), intent(in) :: Rnet  ! net radiation (MJ m-2 d-1)
+real(sp), intent(in) :: HNpos ! daytime accumulated net radiation (MJ m-2 d-1)
 
 ! parameters
 
@@ -104,21 +210,27 @@ real(sp), parameter :: pwLf = pw * Lf ! product of the above two terms
 
 ! local variable
 
+real(sp) :: psm   ! potential snowmelt
 real(sp) :: Eswe  ! evaporating snowmelt
+real(sp) :: HApos ! net radiation remaining after snowmelt
 
 ! ----
 
-if (Rnet > 0.) then
+psm = 1000. * HNpos / pwLf
 
-  snowmelt = min(SWE,1000. * Rnet / pwLf)
+if (psm <= SWE) then
+
+  snowmelt = psm
 
 else
 
-  snowmelt = 0.
+  snowmelt = SWE
+
+  HApos = HNpos - SWE * pwLf / 1000.
+
+  Eswe = min(snowmelt,HApos / Econ(P,temp) * 1000.)
 
 end if
-
-Eswe = min(snowmelt,Rnet / Econ(P,temp) * 1000.)
 
 snowmelt = snowmelt - Eswe
 

@@ -103,11 +103,6 @@ real(sp) :: demand  ! water demand (mm)
 
 ! -----
 
-dmet%rain = dmet%prec
-dmet%melt = 0.
-
-! ----
-
 Emd = etmax * dmet%dayl
 
 if (soilw%whc > 0. .and. soilw%w > 0.) then

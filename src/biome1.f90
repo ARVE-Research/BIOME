@@ -18,7 +18,7 @@ use physicsmod,      only : stdP
 use airmassmod,      only : initairmass,elev_corr,Pjj
 use radiationmod,    only : radpet
 use soilwatermod,    only : calcwhc,soilwater
-use snowmod,         only : Tt
+use snowmod,         only : Tt,snow
 use calcbiomemod,    only : calcbiome
 
 implicit none
@@ -292,7 +292,9 @@ dmet0%wind = 0.
 dmet0%rad0 = 0.
 dmet0%dayl = 0.
 dmet0%tday = 0.
-dmet0%tnight= 0.
+dmet0%tnight = 0.
+dmet0%swe = 0.
+dmet0%asnow = 0
 
 soilw%w = soilw%whc
 
@@ -360,6 +362,8 @@ do i = 1,ncells
   dmet0(i)%delta = solar%delta
   dmet0(i)%rad0  = solar%rad0
   dmet0(i)%dayl  = solar%dayl
+  
+  dmet0(i)%Bsw   = B0  ! initialize to background albedo
 
 end do
 
@@ -429,26 +433,16 @@ do m = 1,nmos
 
       call diurnaltemp(dmet0(i),dmet1(i))
       
-      ! shortwave albedo for vegetated surfaces. should vary by vegetation type, snow cover, and phenological state; placeholder for now
-      albedo = 0.17  
-      
       ! surface radiation budget and potential evapotranspiration
   
-      call radpet(pixel(i),solar,albedo,dmet0(i))
-      
-      ! ----
-      
-      
-      
-      ! dpd_day   = dmet0(i)%tday   - dmet0(i)%tdew
-      ! dpd_night = dmet0(i)%tnight - dmet0(i)%tdew
-      
-      
-      ! write(*,'(3i5,8f8.2)')doy,d,m,dmet0(i)%tdew,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
+      call radpet(pixel(i),dmet0(i))
       
       ! snow dynamics
+
+      call snow(pixel(i),dmet0(i))
       
-      
+      dmet1(i)%asnow = dmet0(i)%asnow
+      dmet1(i)%Bsw = dmet0(i)%Bsw
       
       ! soil water balance, including actual evapotranspiration and alpha
       
@@ -531,21 +525,16 @@ do m = 1,nmos
 
       call diurnaltemp(dmet0(i),dmet1(i))
 
-      ! write(*,'(i5,5f8.2)')doy+ndy,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin
+      ! surface radiation budget and potential evapotranspiration
+  
+      call radpet(pixel(i),dmet0(i))
       
-      albedo = 0.17  ! shortwave albedo for vegetated surfaces, after Federer (1968) in Davis et al. (2017)
-
-      ! calculate surface solar radiation and potential evapotranspiration
-
-      call radpet(pixel(i),solar,albedo,dmet0(i))
-
-      ! dpd_day   = dmet0(i)%tday   - dmet0(i)%tdew
-      ! dpd_night = dmet0(i)%tnight - dmet0(i)%tdew
+      ! snow dynamics
+            
+      call snow(pixel(i),dmet0(i))
       
-      ! write(*,'(3i5,8f8.2)')doy+ndy,d,m,dmet0(i)%tdew,dmet0(i)%tmin,dmet0(i)%tday,dmet0(i)%tmax,dmet0(i)%tnight,dmet1(i)%tmin,dpd_day,dpd_night
-     
       ! soil water balance, including actual evapotranspiration and alpha
-
+      
       call soilwater(dmet0(i),soilw(i))
       
       ! monthly summaries
@@ -558,6 +547,8 @@ do m = 1,nmos
 
       pixel(i)%gdd5 = pixel(i)%gdd5 + max(dmet0(i)%tday - 5.,0.)
       pixel(i)%gdd0 = pixel(i)%gdd0 + max(dmet0(i)%tday,0.)
+
+      ! store today's meteorology for tomorrow
 
       dmet0(i) = dmet1(i)
 

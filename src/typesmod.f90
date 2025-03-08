@@ -210,6 +210,8 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: tnight    ! mean nighttime temperature
   real(sp) :: wday      ! mean daytime windspeed
   real(sp) :: wnight    ! mean nighttime windspeed
+  real(sp) :: prday     ! total daytime precipitation
+  real(sp) :: prnight   ! total nighttime precipitation
 
   real(sp) :: rad0      ! top-of-atmosphere insolation (W m-2)
   real(sp) :: rdirect   ! downwelling shortwave radiation, direct beam component (kJ m-2 d-1)
@@ -219,6 +221,11 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: lwnight   ! downwelling longwave radiation, nighttime mean (W m-2)
   real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
+  real(sp) :: Bsw       ! shortwave albedo
+  ! real(sp) :: Bsnw      ! snow albedo
+  
+  real(sp) :: HNpos     ! daytime accumulated net radiation (MJ m-2 d-1)
+  
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet
   
@@ -226,9 +233,11 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: snow
   real(sp) :: melt
 
-  real(sp) :: dsnow     ! snow depth (cm)
+  real(sp) :: swe       ! snow water equivalent (mm)
   real(sp) :: psnow     ! snow density ()
-  real(sp) :: asnow     ! snow depth (cm)
+  real(sp) :: hsnow     ! snow depth (cm)
+  real(sp) :: fsnow     ! snow areal cover (fraction)
+  integer  :: asnow     ! snowpack age (days)
   
   ! diagnostic output, uncomment this section as needed
 

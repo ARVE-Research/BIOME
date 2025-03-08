@@ -16,7 +16,8 @@ contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine radpet(pixel,solar,albedo,dmet)
+! subroutine radpet(pixel,solar,dmet)
+subroutine radpet(pixel,dmet)
 
 ! shortwave and longwave radiation and dew point all depend on potential evapotranspiration (PET)
 ! we therefore pick an initial value for PET in this routine and iterate to a stable solution
@@ -30,8 +31,7 @@ implicit none
 ! arguments
 
 type(pixeltype),     intent(in)    :: pixel
-type(solarpars),     intent(in)    :: solar
-real(sp),            intent(in)    :: albedo  ! surface shortwave albedo
+! type(solarpars),     intent(in)    :: solar
 type(metvars_daily), intent(inout) :: dmet    ! daily meteorological variables
 
 ! parameter
@@ -52,6 +52,8 @@ real(sp) :: Pann  ! total annual precipitation (mm)
 real(sp) :: Pjj   ! precipitation equitability index 
 real(sp) :: Ratm  ! relative atmospheric pressure (based on elevation)
 real(sp) :: P     ! mean atmospheric pressure (based on elevation)
+
+real(sp) :: albedo 
 
 type(airmasspars) :: air
 
@@ -85,8 +87,8 @@ real(sp) :: rw
 real(sp) :: sw
 
 ! real(sp) :: Ilw
-real(sp) :: Hnpos
-real(sp) :: Hnneg
+real(sp) :: HNpos   ! daytime accumulated net radiation (MJ m-2 d-1)
+real(sp) :: HNneg
 
 real(sp) :: sunf
 
@@ -101,6 +103,8 @@ integer :: i
 rad0   = dmet%rad0
 dayl   = dmet%dayl
 delta  = dmet%delta
+
+albedo = dmet%Bsw
 
 tmin = dmet%tmin
 tmax = dmet%tmax
@@ -169,9 +173,9 @@ do
     hn = acos(lwterm)
   end if
   
-  Hnpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
+  HNpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
   
-  Hnneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
+  HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
   
   ! Isw = sw_rad * (1. - albedo)
 
@@ -198,6 +202,7 @@ end do
 dmet%rdirect  = direct
 dmet%rdiffuse = diffuse
 dmet%dpet     = dpet
+dmet%HNpos    = HNpos
 
 ! night timestep
 
