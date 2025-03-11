@@ -441,14 +441,17 @@ do m = 1,nmos
 
       call snow(pixel(i),dmet0(i))
       
-      dmet1(i)%asnow = dmet0(i)%asnow
-      dmet1(i)%Bsw = dmet0(i)%Bsw
-      
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet0(i),soilw(i))
+      
+      ! write(0,*)soilw(i)
 
       ! store today's meteorology for tomorrow
+
+      dmet1(i)%swe   = dmet0(i)%swe
+      dmet1(i)%asnow = dmet0(i)%asnow
+      dmet1(i)%Bsw   = dmet0(i)%Bsw
 
       dmet0(i) = dmet1(i)
 
@@ -532,7 +535,7 @@ do m = 1,nmos
       ! snow dynamics
             
       call snow(pixel(i),dmet0(i))
-      
+
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet0(i),soilw(i))
@@ -550,6 +553,10 @@ do m = 1,nmos
 
       ! store today's meteorology for tomorrow
 
+      dmet1(i)%swe   = dmet0(i)%swe
+      dmet1(i)%asnow = dmet0(i)%asnow
+      dmet1(i)%Bsw   = dmet0(i)%Bsw
+      
       dmet0(i) = dmet1(i)
 
     end do ! cells

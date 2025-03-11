@@ -31,6 +31,25 @@ implicit none
 ! 12 Hot desert shrub
 ! 13 Cold desert shrub
 
+! list of biome number/names
+!  1 tropical rain forest
+!  2 tropical seasonal forest
+!  3 tropical dry forests/savanna
+!  4 warm mixed forest
+!  5 temperate deciduous forest
+!  6 cool mixed forest
+!  7 cool conifer forest
+!  8 cold evergreen forest
+!  9 cold mixed forest
+! 10 cold deciduous forest
+! 11 xerophytic woods and scrub
+! 12 warm grass/shrub
+! 13 cool grass/shrub
+! 14 tundra
+! 15 hot desert
+! 16 semidesert
+! 17 polar desert
+
 ! argument
 
 type(pixeltype), intent(inout) :: pixel

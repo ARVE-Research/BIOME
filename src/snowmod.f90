@@ -31,8 +31,8 @@ real(sp), parameter :: B0snw =   0.85   ! albedo of fresh snow
 
 ! local variables
 
-real(sp) :: snowd
-real(sp) :: snown
+real(sp) :: snowfall_day
+real(sp) :: snowfall_night
 real(sp) :: Bsnw
 
 ! ----
@@ -45,31 +45,42 @@ if (dmet%prec > 0.) then
 
   ! day
 
-  dmet%rain = dmet%prday * frain(dmet%tday,pixel%Tt)
-  snowd = dmet%prday - dmet%rain
-  
-  if (snowd > 0.) dmet%swe = dmet%swe + dmet%snow
+  snowfall_day = dmet%prday * (1. - frain(dmet%tday,pixel%Tt))
   
   ! night
   
-  dmet%rain = dmet%prnight * frain(dmet%tnight,pixel%Tt)
-  snown = dmet%prnight - dmet%rain
-
-  if (snown > 0.) dmet%swe = dmet%swe + dmet%snow
+  snowfall_night = dmet%prnight * (1. - frain(dmet%tnight,pixel%Tt))
 
   ! --
 
-  dmet%snow = snowd + snown
+  dmet%snow = snowfall_day + snowfall_night
+    
+  dmet%swe = dmet%swe + dmet%snow
+
+else 
+
+  dmet%snow = 0.
 
 end if
  
+dmet%rain = max(dmet%prec - dmet%snow,0.)
+
+if (dmet%rain < 0.) then
+  write(0,*)'error in rain',dmet%rain,dmet%prec,dmet%snow
+  stop
+end if
+
 ! snowmelt - should separate into day and night parts
+
+! write(0,*)'melt',dmet%HNpos,dmet%swe
 
 dmet%melt = snowmelt(pixel%P,dmet%tday,dmet%swe,dmet%HNpos)
 
 ! snowpack accounting
 
 dmet%swe = max(dmet%swe - dmet%melt,0.)
+
+! write(0,*)'swe',dmet%HNpos,dmet%swe
 
 ! snow cover fraction
 
@@ -105,6 +116,8 @@ end if
 if (dmet%Bsw < 0. .or. dmet%Bsw > 1.) then
   write(0,*)'albedo error',B0,Bsnw,dmet%fsnow
 end if
+
+! write(0,*)'snow',dmet%tday,dmet%tnight,dmet%prec,dmet%snow,dmet%melt,dmet%swe,dmet%fsnow,dmet%asnow
 
 end subroutine snow
 
@@ -177,6 +190,8 @@ T = (Tair - Ttm) / (1.4 * Trm)
 
 frain = 5. * T**3 + 6.76 * T**2 + 3.19 * T + 0.5
 
+frain = max(min(frain,1.),0.)
+
 end function frain
 
 ! ---------------------------------------
@@ -195,7 +210,7 @@ implicit none
 real(sp), intent(in) :: P     ! mean air pressure (Pa)
 real(sp), intent(in) :: temp  ! temperature (degC)
 real(sp), intent(in) :: SWE   ! snow-water equivalent (mm)
-real(sp), intent(in) :: HNpos ! daytime accumulated net radiation (MJ m-2 d-1)
+real(sp), intent(in) :: HNpos ! daytime accumulated net radiation (J m-2 d-1)
 
 ! parameters
 
@@ -217,6 +232,8 @@ real(sp) :: HApos ! net radiation remaining after snowmelt
 ! ----
 
 psm = 1000. * HNpos / pwLf
+
+! write(0,*)'snowmelt',HNpos,psm
 
 if (psm <= SWE) then
 

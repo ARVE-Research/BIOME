@@ -87,7 +87,7 @@ real(sp) :: rw
 real(sp) :: sw
 
 ! real(sp) :: Ilw
-real(sp) :: HNpos   ! daytime accumulated net radiation (MJ m-2 d-1)
+real(sp) :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
 real(sp) :: HNneg
 
 real(sp) :: sunf
