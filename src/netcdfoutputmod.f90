@@ -305,6 +305,78 @@ ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
+! temperature of the coldest month
+
+ncstat = nf90_def_var(ofid,'tcm',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','temperature of the coldest month')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','degC')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! temperature of the warmest month
+
+ncstat = nf90_def_var(ofid,'twm',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','temperature of the warmest month')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','degC')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! GDD0
+
+ncstat = nf90_def_var(ofid,'GDD0',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','growing-degree-days on a 5C base')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','degC')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! GDD5
+
+ncstat = nf90_def_var(ofid,'GDD5',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','growing-degree-days on a 5C base')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','degC')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
 ! annual mean alpha
 
 ncstat = nf90_def_var(ofid,'aalpha',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)

@@ -16,7 +16,6 @@ contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-! subroutine radpet(pixel,solar,dmet)
 subroutine radpet(pixel,dmet)
 
 ! shortwave and longwave radiation and dew point all depend on potential evapotranspiration (PET)
@@ -57,15 +56,15 @@ real(sp) :: albedo
 
 type(airmasspars) :: air
 
-real(sp) :: toa_sw  ! daily total top-of-the-atmosphere downwelling shortwave rad (kJ m-2 d-1)
+real(sp) :: toa_sw  ! mean daily total top-of-the-atmosphere downwelling shortwave rad (W m-2)
 real(sp) :: delta   ! solar declination (degrees)
-real(sp) :: direct  ! direct beam surface downwelling shortwave (kJ m-2 d-1)
-real(sp) :: diffuse ! diffuse surface downwelling shortwave (kJ m-2 d-1)
+real(sp) :: direct  ! mean daily direct beam surface downwelling shortwave (W m-2)
+real(sp) :: diffuse ! mean daily diffuse surface downwelling shortwave (W m-2)
 
 real(sp) :: rad0    ! daily mean top-of-the-atmosphere insolation (W m-2)
 real(sp) :: dayl    ! day length (h)
 
-real(sp) :: sw_rad  ! total surface downwelling shortwave (kJ m-2 d-1)
+real(sp) :: sw_rad  ! total surface downwelling shortwave (W m-2)
 real(sp) :: lw_rad  ! net longwave (kJ m-2 d-1)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
@@ -150,18 +149,24 @@ call airmass(lat,delta/pir,dayl,Ratm,air)
 
 i = 1
 
-pet0 = 1.
+pet0 = 0.
 dpet = pet0
 
 do
 
+  ! shortwave flux
+  
   call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,dpet,direct,diffuse,sw_rad)
-  
-  sunf = sf(elv,rad0,sw_rad)
-  
-  call surf_lw2(sunf,tday,lw_rad)
 
   rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+
+  ! longwave flux
+
+  sunf = sf(elv,rad0,sw_rad)
+
+  call surf_lw2(sunf,tday,lw_rad)
+
+!   write(0,'(i5,f8.2,2f8.3,4f8.2)')i,toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad
   
   lwterm = (lw_rad - rw * ru) / (rw * rv)
   
@@ -172,6 +177,8 @@ do
   else
     hn = acos(lwterm)
   end if
+  
+  ! daily net fluxes
   
   HNpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
   
@@ -227,16 +234,16 @@ implicit none
 
 real(sp),          intent(in)  :: Pjj      ! precipitation equitability index (see function)
 real(sp),          intent(in)  :: Ratm     ! relative atmospheric pressure (see function)
-real(sp),          intent(in)  :: rad0     ! top-of-atmospere insolation (kJ m-2 d-1)
+real(sp),          intent(in)  :: rad0     ! top-of-atmospere insolation (W m-2)
 real(sp),          intent(in)  :: cldf     ! total cloud cover (fraction)
 type(airmasspars), intent(in)  :: air      ! airmass parameters
 real(sp),          intent(in)  :: albedo   ! surface shortwave albedo
 real(sp),          intent(in)  :: prec     ! precipitation mm/day
 real(sp),          intent(in)  :: tcm      ! temperature of the coldest month (used as tropics indicator)
 real(sp),          intent(in)  :: pet      ! potential evapotranspiration mm/day
-real(sp),          intent(out) :: direct   ! direct-beam downwelling shortwave (kJ m-2 d-1)
-real(sp),          intent(out) :: diffuse  ! diffuse downwelling shortwave (kJ m-2 d-1)
-real(sp),          intent(out) :: sw_rad   ! total downwelling shortwave
+real(sp),          intent(out) :: direct   ! direct-beam downwelling shortwave (W m-2)
+real(sp),          intent(out) :: diffuse  ! diffuse downwelling shortwave W m-2)
+real(sp),          intent(out) :: sw_rad   ! total downwelling shortwave W m-2)
 
 ! parameters
 
@@ -295,9 +302,9 @@ end subroutine surf_sw
 real(sp) function tau0(tcm,Ratm,prec,pet,Pjj)
 
 ! Estimate the transmission coefficient of the atmosphere for direct solar irradiance,
-! which is also called the clear-sky atmospheric transmittance. Based on
-! Yin, X. (1998). Temporally-aggregated atmospheric optical properties as a function of common climatic information: Systems development and application. 
-! Meteorology and Atmospheric Physics, 68(1-2), 99-113. doi:10.1007/Bf01025387
+! which is also called the clear-sky atmospheric transmittance. Based on:
+! Yin, X. (1998). Temporally-aggregated atmospheric optical properties as a function of common climatic information:
+! Systems development and application. Meteorology and Atmospheric Physics, 68(1-2), 99-113. doi:10.1007/Bf01025387
  
 use parametersmod, only : sp,pi => pi_sp
 
@@ -625,8 +632,8 @@ implicit none
 ! arguments
 
 real(sp), intent(in) :: elv      ! elevation (m) 
-real(sp), intent(in) :: rad0     ! 
-real(sp), intent(in) :: sw_rad   ! 
+real(sp), intent(in) :: rad0     ! top of the atmosphere shortwave radiation 
+real(sp), intent(in) :: sw_rad   ! surface shortwave radiation
 
 ! parameters
 
@@ -636,7 +643,7 @@ real(sp), parameter :: c = 1. / k6  ! exponent Sandoval et al. eqn 12
 
 ! local variables
 
-real(sp) :: tau   ! total atmospheric transmittance: (ration of total surface SW to TOA SW, includes clouds)
+real(sp) :: tau   ! total atmospheric transmittance: (ratio of total surface SW to TOA SW, includes clouds)
 real(sp) :: tau0  ! clear-sky atmospheric transmittance (function of elevation)
 
 real(sp) :: a
@@ -644,7 +651,7 @@ real(sp) :: b
 real(sp) :: ab
 
 ! ----
-! the equation for clear-sky transmittance (tau0) comes from line 170 of SOLAR.cpp in the rsplash github code.
+! The equation for clear-sky transmittance (tau0) comes from line 170 of SOLAR.cpp in the rsplash github code.
 ! I cannot find any source for the exact formulation. The paper cites Allen (1996), which does contain a 
 ! similar formula for a variable called KT (eqn 2): [0.75 + 2.e-5 * elv], which has its original source in Allen et al. (1994):
 !   Allen, R. G., Smith, M., Pereira, L. S., & Perrier, A. (1994). An update for the calculation of reference evapotranspiration. 
@@ -670,11 +677,12 @@ b = tau0 * (1. - k5)  ! denominator Sandoval et al. eqn 12
 
 ab = max(a / b,0.)
 
-sf = (ab)**c       ! Sandoval et al. eqn 12
+sf = ab**c       ! Sandoval et al. eqn 12
+
+sf = max(min(sf,1.),0.)
 
 end function sf
 
 ! ----------------------------------------------------------------------------------------------------------------
-
 
 end module radiationmod

@@ -445,6 +445,8 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
       
+      ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
+      
       ! write(0,*)soilw(i)
 
       ! store today's meteorology for tomorrow
@@ -539,6 +541,8 @@ do m = 1,nmos
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet0(i),soilw(i))
+
+!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       
       ! monthly summaries
 
@@ -592,7 +596,12 @@ call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
 
+call writereal2d(ofid,gridinfo,pixel,'tcm',pixel%tcm)
+call writereal2d(ofid,gridinfo,pixel,'twm',pixel%twm)
+call writereal2d(ofid,gridinfo,pixel,'GDD0',pixel%gdd0)
+call writereal2d(ofid,gridinfo,pixel,'GDD5',pixel%gdd5)
 call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
+
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 
 ! ---------------------------------

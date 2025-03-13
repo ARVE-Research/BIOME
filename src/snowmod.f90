@@ -117,7 +117,7 @@ if (dmet%Bsw < 0. .or. dmet%Bsw > 1.) then
   write(0,*)'albedo error',B0,Bsnw,dmet%fsnow
 end if
 
-! write(0,*)'snow',dmet%tday,dmet%tnight,dmet%prec,dmet%snow,dmet%melt,dmet%swe,dmet%fsnow,dmet%asnow
+! write(0,*)'snow',dmet%tday,dmet%tnight,dmet%prec,dmet%snow,dmet%melt,dmet%swe,dmet%fsnow,dmet%asnow,dmet%Bsw
 
 end subroutine snow
 
@@ -215,7 +215,7 @@ real(sp), intent(in) :: HNpos ! daytime accumulated net radiation (J m-2 d-1)
 ! parameters
 
 real(sp), parameter :: pw = 999.8395  ! density of water at 0 degC (kg m-3) (Kell, 1975)
-real(sp), parameter :: Lf =   3.34e5  ! latent heat of fusion of water (J kg-1) 
+real(sp), parameter :: Lf =   3.3355e5  ! latent heat of fusion of water (J kg-1) 
 
 real(sp), parameter :: pwLf = pw * Lf ! product of the above two terms
 
@@ -231,7 +231,7 @@ real(sp) :: HApos ! net radiation remaining after snowmelt
 
 ! ----
 
-psm = 1000. * HNpos / pwLf
+psm = HNpos / pwLf * 1000.  ! units (J m-2 d-1) / (kg m-3 J kg-1) = m * 1000 = mm
 
 ! write(0,*)'snowmelt',HNpos,psm
 

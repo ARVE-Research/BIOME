@@ -31,7 +31,7 @@ implicit none
 ! 12 Hot desert shrub
 ! 13 Cold desert shrub
 
-! list of biome number/names
+! --- list of biome number/names ---
 !  1 tropical rain forest
 !  2 tropical seasonal forest
 !  3 tropical dry forests/savanna
