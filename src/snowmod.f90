@@ -54,7 +54,7 @@ if (dmet%prec > 0.) then
   ! --
 
   dmet%snow = snowfall_day + snowfall_night
-    
+  
   dmet%swe = dmet%swe + dmet%snow
 
 else 
@@ -74,13 +74,11 @@ end if
 
 ! write(0,*)'melt',dmet%HNpos,dmet%swe
 
-dmet%melt = snowmelt(pixel%P,dmet%tday,dmet%swe,dmet%HNpos)
-
-! snowpack accounting
-
-dmet%swe = max(dmet%swe - dmet%melt,0.)
-
-! write(0,*)'swe',dmet%HNpos,dmet%swe
+if (dmet%swe > 0. .and. dmet%tday >= 0.) then
+  call snowmelt(pixel%P,dmet%tday,dmet%HNpos,dmet%swe,dmet%melt)  ! adjusts SWE
+else 
+  dmet%melt = 0.
+end if
 
 ! snow cover fraction
 
@@ -196,7 +194,7 @@ end function frain
 
 ! ---------------------------------------
 
-real(sp) function snowmelt(P,temp,SWE,HNpos)
+subroutine snowmelt(P,temp,HNpos,SWE,melt)
 
 ! Sandoval et al. (2024) eqn. 21, output units mm d-1
 
@@ -207,10 +205,11 @@ implicit none
 
 ! arguments
 
-real(sp), intent(in) :: P     ! mean air pressure (Pa)
-real(sp), intent(in) :: temp  ! temperature (degC)
-real(sp), intent(in) :: SWE   ! snow-water equivalent (mm)
-real(sp), intent(in) :: HNpos ! daytime accumulated net radiation (J m-2 d-1)
+real(sp), intent(in)    :: P      ! mean air pressure (Pa)
+real(sp), intent(in)    :: temp   ! air temperature (degC)
+real(sp), intent(in)    :: HNpos  ! 24 hour integrated positive net radiation (J m-2 d-1)
+real(sp), intent(inout) :: SWE    ! snow-water equivalent (mm)
+real(sp), intent(out)   :: melt   ! snowmelt adjusted for sublimation (if any) (mm)
 
 ! parameters
 
@@ -233,25 +232,27 @@ real(sp) :: HApos ! net radiation remaining after snowmelt
 
 psm = HNpos / pwLf * 1000.  ! units (J m-2 d-1) / (kg m-3 J kg-1) = m * 1000 = mm
 
-! write(0,*)'snowmelt',HNpos,psm
-
 if (psm <= SWE) then
 
-  snowmelt = psm
-
+  melt = psm
+  
+  Eswe = 0.
+  
 else
 
-  snowmelt = SWE
-
+  melt = SWE
+  
   HApos = HNpos - SWE * pwLf / 1000.
 
-  Eswe = min(snowmelt,HApos / Econ(P,temp) * 1000.)
+  Eswe = min(melt,HApos / Econ(P,temp) * 1000.)
 
 end if
 
-snowmelt = snowmelt - Eswe
+swe = swe - melt
 
-end function snowmelt
+melt = melt - Eswe  
+
+end subroutine snowmelt
 
 ! ---------------------------------------
 

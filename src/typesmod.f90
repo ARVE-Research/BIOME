@@ -59,8 +59,10 @@ type pixeltype
   real(sp) :: twm    ! temperature of the warmest month (degC)
   real(sp) :: gdd5   ! growing degree days on a 5-degree base (degC)
   real(sp) :: gdd0   ! growing degree days on a 0-degree base (degC)
+  real(sp) :: awm    ! alpha of the warmest month (fraction)
   real(sp) :: aalpha ! mean annual alpha (fraction)
 
+  integer :: wm
   integer(i2) :: biome
   
   ! logical :: valid

@@ -5,7 +5,7 @@ use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
 use netcdfoutputmod
-use utilitymod,      only : bp2ce,leapyear,overprint
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
@@ -71,6 +71,7 @@ integer :: ofid
 integer :: ndy
 integer, dimension(nmos) :: ndm
 
+integer :: wm
 integer :: d
 
 integer(i8) :: memreq
@@ -188,6 +189,7 @@ do y = 1,cnty
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
     pixel(i)%twm = maxval(climate(x,y,:)%tmp)
+    pixel(i)%wm  = imaxloc(climate(x,y,:)%tmp)
 
     ! precipitation equitability index, used in airmass calculations for surface radiation
     
@@ -445,7 +447,7 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
       
-      ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
+!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       
       ! write(0,*)soilw(i)
 
@@ -580,6 +582,10 @@ write(0,*)
 do i = 1,ncells
 
   pixel(i)%aalpha = sum(mmet(i,:)%alpha) / 12.
+  
+  wm = pixel(i)%wm
+  
+  pixel(i)%awm = mmet(i,wm)%alpha
 
   call calcbiome(pixel(i))
 
@@ -600,6 +606,7 @@ call writereal2d(ofid,gridinfo,pixel,'tcm',pixel%tcm)
 call writereal2d(ofid,gridinfo,pixel,'twm',pixel%twm)
 call writereal2d(ofid,gridinfo,pixel,'GDD0',pixel%gdd0)
 call writereal2d(ofid,gridinfo,pixel,'GDD5',pixel%gdd5)
+call writereal2d(ofid,gridinfo,pixel,'awm',pixel%awm)
 call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
