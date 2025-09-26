@@ -1,6 +1,6 @@
 program biome1
 
-use parametersmod
+use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,present_mon_noleap
 use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
@@ -10,7 +10,7 @@ use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
 use randomdistmod,   only : ran_seed
-use weathergenmod,   only : weathergen
+use weathergenmod,   only : simprecip,weathergen
 use calendarmod
 use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
@@ -333,6 +333,16 @@ do i = 1,ncells
   
   latd = coords(x,y)%geolat
   latr = latd * pir
+
+  ! -------------------------------------
+  ! initialize first month precip
+  
+  call simprecip(climate(x,y,m)%pre,climate(x,y,m)%wet,met_in(i)%pday,pixel(i)%dprec)
+
+
+
+
+
   
   ! variable initializations
 

@@ -67,6 +67,9 @@ type pixeltype
   
   ! logical :: valid
   ! integer, dimension(8) :: neighbors
+  
+  real(sp), dimension(40) :: dprec
+  
 end type pixeltype
 
 ! ---

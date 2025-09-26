@@ -19,6 +19,7 @@ use randomdistmod, only : randomstate
 implicit none
 
 public  :: weathergen
+public  :: simprecip
 
 private :: daymetvars
 private :: meansd
@@ -204,6 +205,166 @@ real(sp), parameter, dimension(6) :: wind_intercept_bias_coeffs = [0.173,0.437,0
 ! -----------------------------------------------------------------------------
 
 contains
+
+! ------------------------------------------------------------------------------------------------------------
+
+subroutine simprecip(pre,wetf,pday,dprec)
+
+! only simulate precipitation occurrence and amount so that this can be repeated to 
+! arrive at a solution that meets the monthly total input precip constraint
+! the daily precipitation amount for the month is then stored as a vector that is used in the daily
+! loop across gridcells
+
+use parametersmod, only : sp,dp
+use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma
+use statsmod,      only : gamma_cdf,gamma_pdf
+use utilitymod,    only : roundto
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: pre    ! monthly total precipitation amount (mm)
+real(sp), intent(in) :: wetf   ! fraction of days in month with precipitation (fraction)
+
+real(sp), dimension(:), intent(out) :: dprec
+
+! local variables
+
+real(sp) :: wetd   ! number of days in month with precipitation (days)
+
+
+integer :: ndm  ! number of days in the month
+integer :: d    ! day counter
+integer :: i    ! counter
+
+real(sp) :: pbar     ! mean amount of precipitation per wet day (mm)
+real(sp) :: pwet     ! probability that today will be wet
+real(sp) :: u        ! uniformly distributed random number (0-1)
+
+logical,  dimension(2) :: pday   ! element for yesterday and the day before yesterday
+
+type(randomstate) :: rndst       ! integer state of the random number generator
+
+real(dp) :: cdf_thresh  ! gamma cdf at the threshold
+real(dp) :: pdf_thresh  ! gamma pdf at the threshold
+
+real(sp) :: g_shape
+real(sp) :: g_scale
+real(sp) :: gp_scale
+
+real(sp) :: prec   ! total daily precipitation 
+
+! -----------------------------------------------------------
+
+ndm = size(dprec)
+
+wetd = real(ceiling(wetf * real(ndm)))
+
+! -----------------------------------------------------------
+! 1) Precipitation occurrence
+
+! if there is precipitation this month, calculate the precipitation state for today
+
+if (wetf > 0. .and. pre > 0.) then
+  do  ! quality control loop
+    do d = 1,ndm
+  
+      ! calculate transitional probabilities for dry to wet and wet to wet days
+      ! Relationships from Geng & Auburn, 1986, Weather simulation models based on summaries of long-term data
+    
+      if (pday(1)) then !yesterday was raining, use p11
+    
+        pwet = p11_1 + p11_2 * wetf
+    
+      else if (pday(2)) then ! yesterday was not raining but the day before yesterday was raining, use p101
+    
+        pwet = p101_1 + p101_2 * wetf
+    
+      else  ! both yesterday and the day before were dry, use p001
+    
+        pwet = p001_1 + p001_2 * wetf
+    
+      end if
+    
+      ! -----
+      ! determine the precipitation state of the current day using the Markov chain approach
+    
+      u = ranur(rndst)
+    
+      if (u <= pwet) then  ! today is a rain day
+    
+        pday = eoshift(pday,-1,.true.)
+    
+      else  !today is dry
+    
+        pday = eoshift(pday,-1,.false.)
+    
+      end if
+    
+      ! ---------------------------
+      ! 2) precipitation amount
+    
+      if (pday(1)) then  ! today is a wet day, calculate the rain amount
+    
+        ! calculate the mean precipitation on days with 
+        
+        pbar = pre / wetd
+    
+        ! calculate parameters for the distribution function of precipitation amount
+    
+        g_scale = g_scale_coeff * pbar
+        g_shape = pbar / g_scale
+    
+        call gamma_cdf(p_trans,0.,g_scale,g_shape,cdf_thresh)
+    
+        call gamma_pdf(p_trans,0.,g_scale,g_shape,pdf_thresh)
+    
+        gp_scale = real((1._dp - cdf_thresh) / pdf_thresh)
+    
+        i = 1
+        do
+    
+          !today's precipitation
+          
+          prec = ran_gamma_gp(rndst,.true.,g_shape,g_scale,p_trans,gp_shape,gp_scale)
+    
+          ! enforce positive precipitation that is not more than 5% greater than the monthly total
+    
+          if (prec > 0. .and. prec <= 1.05 * pre) exit
+    
+          if (i == 1000) then
+            write (0,*)'Could not find good precipitation with ', pre, ' mm and ', wetd, ' wet days'
+            stop
+          else
+            i = i + 1
+          end if
+    
+        end do
+    
+      else
+    
+        prec = 0.
+    
+      end if
+    
+      dprec(d) = prec
+  
+    end do
+    
+    if (abs(sum(dprec) - pre) < 0.1 * pre) exit
+
+  end do  ! quality control loop
+
+else  ! there was no precipitation in this month, so none on this day either
+
+  pday = .false.
+  prec = 0.
+  dprec = 0.
+
+end if
+
+end subroutine simprecip
 
 ! ------------------------------------------------------------------------------------------------------------
 
