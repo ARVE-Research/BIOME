@@ -174,10 +174,9 @@ end type airmasspars
 
 type metvars_in  ! structure for weather generator input
 
-  ! monthly means
+  ! monthly values
 
   real(sp) :: prec  ! total precipitation amount (mm)
-  real(sp) :: wetd  ! number of days in the month with precipitation
   real(sp) :: wetf  ! fraction of days in the month with precipitation
 
   ! means-preserving interpolated estimate of daily values
@@ -186,10 +185,10 @@ type metvars_in  ! structure for weather generator input
   real(sp) :: tmax  ! maximum temperture (C)
   real(sp) :: cldf  ! cloud fraction (0=clear sky, 1=overcast) (fraction)
   real(sp) :: wind  ! wind speed (m/s)
-  
+
   ! variables that carry over from one day to the next
 
-  logical, dimension(2)  :: pday   ! precipitation status: true if the day was a rain day
+  logical, dimension(2)  :: pday   ! precipitation occurrence on the preceding two days
   type(randomstate)      :: rndst  ! state of the random number generator
   real(sp), dimension(4) :: resid  ! previous day's weather residuals
 

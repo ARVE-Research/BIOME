@@ -1,6 +1,6 @@
 program biome1
 
-use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,present_mon_noleap
+use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing !,present_mon_noleap
 use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
@@ -10,7 +10,7 @@ use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
 use randomdistmod,   only : ran_seed
-use weathergenmod,   only : simprecip,weathergen
+use weathergenmod,   only : calcdprec,weathergen
 use calendarmod
 use insolationmod,   only : truelon,insol
 use diurnaltempmod,  only : diurnaltemp
@@ -58,7 +58,6 @@ integer :: x
 integer :: y
 integer :: m
 integer :: i
-integer :: j
 
 integer :: doy
 integer :: d1
@@ -83,10 +82,9 @@ real(dp) :: slon  ! true solar longitude, for insolation calculations (radians)
 real(dp) :: latr  ! geodesic latitude (radians)
 real(dp) :: latd  ! geodesic latitude (degrees)
 
-real(sp) :: albedo
-
-real(sp) :: dpd_day
-real(sp) :: dpd_night
+! real(sp) :: albedo
+! real(sp) :: dpd_day
+! real(sp) :: dpd_night
 
 character(40) :: status_line
 
@@ -248,6 +246,8 @@ do i = 1,ncells
   call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
   call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
   
+  where (climate(x,y,:)%pre > 0. .and. climate(x,y,:)%wet <= 0.) climate(x,y,:)%wet = 1. / real(ndm)
+  
   ! calculate the column-integrated soil water holding capacity
   
   call calcwhc(terrain(x,y),soilcoords,soil(x,y,:),soilw(i))
@@ -263,7 +263,7 @@ deallocate(tmax)
 
 allocate(met_in(ncells))
 allocate(dmet0(ncells))    ! for the current day
-allocate(dmet1(ncells))   ! for the next day
+allocate(dmet1(ncells))    ! for the next day
 
 ! initalize the random number generator
 
@@ -286,17 +286,17 @@ do i = 1,4
   met_in%resid(i) = 0.
 end do
 
-dmet0%tmin = 0.
-dmet0%tmax = 0.
-dmet0%prec = 0.
-dmet0%cldf = 0.
-dmet0%wind = 0.
-dmet0%rad0 = 0.
-dmet0%dayl = 0.
-dmet0%tday = 0.
+dmet0%tmin   = 0.
+dmet0%tmax   = 0.
+dmet0%prec   = 0.
+dmet0%cldf   = 0.
+dmet0%wind   = 0.
+dmet0%rad0   = 0.
+dmet0%dayl   = 0.
+dmet0%tday   = 0.
 dmet0%tnight = 0.
-dmet0%swe = 0.
-dmet0%asnow = 0
+dmet0%swe    = 0.
+dmet0%asnow  = 0
 
 soilw%w = soilw%whc
 
@@ -335,20 +335,10 @@ do i = 1,ncells
   latr = latd * pir
 
   ! -------------------------------------
-  ! initialize first month precip
-  
-  call simprecip(climate(x,y,m)%pre,climate(x,y,m)%wet,met_in(i)%pday,pixel(i)%dprec)
-
-
-
-
-
-  
   ! variable initializations
 
   met_in(i)%prec = climate(x,y,m)%pre
   met_in(i)%wetf = climate(x,y,m)%wet
-  met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
 
   met_in(i)%tmin = daily(i,doy)%tmin
   met_in(i)%tmax = daily(i,doy)%tmax
@@ -359,6 +349,12 @@ do i = 1,ncells
     write(0,*)'unphysical tmin tmax'
     write(0,*)met_in(i)%tmin,met_in(i)%tmax
   end if
+
+  ! initialize precipitation; this is done one month at a time, returns daily precip amount for one month
+  
+  call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(1)))
+  
+  dmet0(i)%prec = pixel(i)%dprec(1)
 
   ! initialize daily meteorology for the current day, NB this is the only time this is called for the current day
 
@@ -377,7 +373,7 @@ do i = 1,ncells
   
   dmet0(i)%Bsw   = B0  ! initialize to background albedo
 
-end do
+end do  ! loop over valid cells
 
 ! ----------------------------------------------------------------------------------------------------------------
 ! initialization year loop
@@ -387,6 +383,23 @@ write(0,*)'start initialization daily loop'
 doy = 1  ! day of year counter
 
 do m = 1,nmos
+
+  if (m > 1) then   ! calculate monthly precipitation (for the first month, it's already done above)
+    do i = 1,ncells
+
+      x = pixel(i)%x
+      y = pixel(i)%y
+
+      met_in(i)%prec = climate(x,y,m)%pre
+      met_in(i)%wetf = climate(x,y,m)%wet
+
+      call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
+      
+    end do
+  end if
+  
+  ! daily loop
+
   do d = 1,ndm(m)
   
     d1 = doy + 1
@@ -412,9 +425,7 @@ do m = 1,nmos
       
       ! variable initializations
 
-      met_in(i)%prec = climate(x,y,m)%pre
-      met_in(i)%wetf = climate(x,y,m)%wet
-      met_in(i)%wetd = climate(x,y,m)%wet * cal%ndmr(m)
+      dmet1(i)%prec = pixel(i)%dprec(d)
 
       met_in(i)%tmin = daily(i,d1)%tmin
       met_in(i)%tmax = daily(i,d1)%tmax
@@ -457,7 +468,8 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
       
-!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
+!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow, & 
+!                 dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       
       ! write(0,*)soilw(i)
 
@@ -495,6 +507,19 @@ pixel%gdd5 = 0.
 doy = 1
 
 do m = 1,nmos
+
+  do i = 1,ncells
+
+    x = pixel(i)%x
+    y = pixel(i)%y
+
+    met_in(i)%prec = climate(x,y,m)%pre
+    met_in(i)%wetf = climate(x,y,m)%wet
+
+    call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
+    
+  end do
+
   do d = 1,ndm(m)
   
     d1 = doy + 1
@@ -514,11 +539,14 @@ do m = 1,nmos
     
       x = pixel(i)%x
       y = pixel(i)%y
-    
-      met_in(i)%prec = climate(x,y,m)%pre
-      met_in(i)%wetf = climate(x,y,m)%wet
-      met_in(i)%wetd = climate(x,y,m)%wet * real(present_mon_noleap(m))
       
+      latd = coords(x,y)%geolat
+      latr = latd * pir
+      
+      ! variable initializations
+
+      dmet1(i)%prec = pixel(i)%dprec(d)
+
       met_in(i)%tmin = daily(i,d1)%tmin
       met_in(i)%tmax = daily(i,d1)%tmax
       met_in(i)%cldf = daily(i,d1)%cld * 0.01
@@ -528,9 +556,7 @@ do m = 1,nmos
   
       call weathergen(met_in(i),dmet1(i))
       
-      ! calculate daylength and insolation
-      
-      latr = coords(x,y)%geolat * pir
+      ! calculate top-of-the-atmosphere insolation and daylength
       
       call insol(slon,orbit,latr,solar)
       
@@ -554,7 +580,9 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
 
-!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
+      write(*,'(2i5,3f7.1)')m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec
+
+      ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       
       ! monthly summaries
 
