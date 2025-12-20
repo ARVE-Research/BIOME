@@ -353,7 +353,7 @@ do  ! quality control loop
   i = i + 1
   
   if (i > maxiter) then
-    write(0,*)'no solution could be found for precipitation'
+    write(0,*)'no solution could be found for precipitation',wetd,npd,qc
     stop
   end if
 
