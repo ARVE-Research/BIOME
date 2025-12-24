@@ -177,7 +177,7 @@ do y = 1,cnty
     
     pixel(i)%lon = coords(x,y)%geolon
     pixel(i)%lat = coords(x,y)%geolat
-
+    
     pixel(i)%elv = terrain(x,y)%elv
     
     pixel(i)%slope  = 0. ! terrain(x,y)%slope
@@ -338,7 +338,7 @@ do i = 1,ncells
   ! variable initializations
 
   met_in(i)%prec = climate(x,y,m)%pre
-  met_in(i)%wetf = climate(x,y,m)%wet
+  met_in(i)%wetf = climate(x,y,m)%wet * 0.01
 
   met_in(i)%tmin = daily(i,doy)%tmin
   met_in(i)%tmax = daily(i,doy)%tmax
@@ -391,7 +391,7 @@ do m = 1,nmos
       y = pixel(i)%y
 
       met_in(i)%prec = climate(x,y,m)%pre
-      met_in(i)%wetf = climate(x,y,m)%wet
+      met_in(i)%wetf = climate(x,y,m)%wet * 0.01
 
       call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
       
@@ -514,7 +514,7 @@ do m = 1,nmos
     y = pixel(i)%y
 
     met_in(i)%prec = climate(x,y,m)%pre
-    met_in(i)%wetf = climate(x,y,m)%wet
+    met_in(i)%wetf = climate(x,y,m)%wet * 0.01
 
     call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
     
@@ -580,7 +580,7 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
 
-      write(*,'(2i5,3f7.1)')m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec
+      ! write(*,'(2i5,3f7.1)')m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec
 
       ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       

@@ -286,7 +286,9 @@ end if
 
 allocate(pdm(ndm))
 
-wetd = nint(wetf * real(ndm))
+! there is positive precip; if wet days rounds to zero, enforce at least one wet day
+
+wetd = max(nint(wetf * real(ndm)),1)  
 
 ! write(0,'(a,f5.2,i5)')'wetd calculated ',wetf * real(ndm),wetd
 
@@ -343,7 +345,7 @@ do  ! quality control loop
 
   qc = abs(npd - wetd)
   
-  ! write(0,*)'iteration ',i,wetd,count(pdm),qc
+  ! write(0,*)'iteration ',i,wetd,npd,qc
   
   if (npd > 0 .and. qc <= 1) exit  ! +/- 1 day > 0
   
@@ -353,7 +355,7 @@ do  ! quality control loop
   i = i + 1
   
   if (i > maxiter) then
-    write(0,*)'no solution could be found for precipitation',wetd,npd,qc
+    write(0,*)'no solution could be found for precipitation'
     stop
   end if
 

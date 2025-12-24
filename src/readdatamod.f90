@@ -44,6 +44,9 @@ integer :: cntx
 integer :: srty
 integer :: cnty
 
+integer :: x
+integer :: y
+
 ! -----
 
 srtx = gridinfo%srtx
@@ -90,7 +93,9 @@ else
   ncstat = nf90_get_var(ncid,varid,coords(:,1)%xcoord,start=[srtx],count=[cntx])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-  coords%geolon = coords%xcoord
+  do y = 1,cnty
+    coords(:,y)%geolon = coords(:,1)%xcoord
+  end do
 
   ncstat = nf90_inq_varid(ncid,'lat',varid)
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
@@ -98,10 +103,20 @@ else
   ncstat = nf90_get_var(ncid,varid,coords(1,:)%ycoord,start=[srty],count=[cnty])
   if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-  coords%geolat = coords%ycoord
+  do x = 1,cntx
+    coords(x,:)%geolat = coords(1,:)%ycoord
+  end do
 
 end if
-  
+
+! do y = 1,cnty
+!   do x = 1,cntx
+!     write(0,*)x,y,coords(x,y)%geolon,coords(x,y)%geolat
+!   end do
+! end do
+! 
+! stop
+
 ncstat = nf90_close(ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 

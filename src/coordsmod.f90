@@ -168,6 +168,11 @@ gridinfo%cntx = max(xpos(2) - xpos(1),1)
 gridinfo%srty = ypos(1)
 gridinfo%cnty = max(ypos(2) - ypos(1),1)
 
+! write(0,*)'input data xlen: ',xlen
+! write(0,*)'input data ylen: ',ylen
+! write(0,*)gridinfo%srtx,gridinfo%srty
+! write(0,*)gridinfo%cntx,gridinfo%cnty
+
 end subroutine calcpixels
 
 ! -----------------------------------------------------
