@@ -1,0 +1,12 @@
+&joboptions
+  climatefile     = '/home/terraces/projects/Olduvai/climate_modern/Olduvai/climate7.5c.nc'
+  soilfile        = '/home/terraces/datasets/soils/Olduvai/soils.nc'
+  gridinfo%isproj = .false.
+/
+
+! sample run command:
+
+! src/biome1 Olduvai.namelist 35/-3 test.nc
+
+! Olduvai domain bounding box (lon-lat): 34.5/36.25/-3.75/-2.25
+
