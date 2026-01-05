@@ -1,0 +1,5 @@
+&joboptions
+  climatefile     = '/home/terraces/projects/BIOME/inputdata/NAclimate.nc'
+  soilfile        = '/home/terraces/projects/BIOME/inputdata/soils.nc'
+  gridinfo%isproj = .true.
+/

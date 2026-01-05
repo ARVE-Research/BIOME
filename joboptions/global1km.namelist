@@ -1,0 +1,9 @@
+&joboptions
+  climatefile     = '/Users/jkaplan/nosync/inputdata_northam/NAclimate.nc'
+  soilfile        = '/Users/jkaplan/nosync/inputdata_northam/NAsoils.nc'
+  gridinfo%isproj = .true.
+/
+
+! sample run command:
+
+! src/biome1 NorthAm.local.namelist -2117500/-617500/-1392500/-112500 test.nc
