@@ -1,5 +1,19 @@
 &joboptions
   climatefile     = '/home/terraces/projects/BIOME/inputdata/NAclimate.nc'
-  soilfile        = '/home/terraces/projects/BIOME/inputdata/soils.nc'
+  soilfile        = '/home/terraces/datasets/soils/NA5km/soils.nc'
   gridinfo%isproj = .true.
 /
+
+! sample run commands:
+
+! src/biome1 NorthAm.Shorea.namelist -2117500/-617500/-1392500/-112500 western3.nc
+! src/biome1 NorthAm.Shorea.namelist -2117500/-1337500/-2012500/-372500 california3.nc
+
+
+! coordinate windows:
+! California: -2117500/-1337500/-2012500/-372500
+! Western U.S.: -2117500/-617500/-1392500/-112500
+
+! single pixel moist (Forks WA)  -1782809/64120
+! single pixel dry (Death Valley CA) -1511836/-1337300
+! single pixel dry (Tucson AZ) -1042289/-1892981

@@ -338,11 +338,11 @@ do i = 1,ncells
   ! variable initializations
 
   met_in(i)%prec = climate(x,y,m)%pre
-  met_in(i)%wetf = climate(x,y,m)%wet * 0.01
+  met_in(i)%wetf = climate(x,y,m)%wet ! * 0.01
 
   met_in(i)%tmin = daily(i,doy)%tmin
   met_in(i)%tmax = daily(i,doy)%tmax
-  met_in(i)%cldf = daily(i,doy)%cld * 0.01
+  met_in(i)%cldf = daily(i,doy)%cld ! * 0.01
   met_in(i)%wind = daily(i,doy)%wnd
   
   if (met_in(i)%tmin > met_in(i)%tmax) then

@@ -288,7 +288,7 @@ allocate(pdm(ndm))
 
 ! there is positive precip; if wet days rounds to zero, enforce at least one wet day
 
-wetd = max(nint(wetf * real(ndm)),1)  
+wetd = max(nint(wetf * real(ndm)),1)
 
 ! write(0,'(a,f5.2,i5)')'wetd calculated ',wetf * real(ndm),wetd
 
@@ -299,7 +299,7 @@ do  ! quality control loop
   ! for quality control purposes, we will set an acceptable threshold for days with precipitation
   ! of +/- 1 day around the input data, with a minimum of 1 day if there is any precip in the month.
   ! once the days with precipitation is successfully determined, we will calculate
-  ! precipitation amount once, and then scale the result to the actual input precip
+  ! precipitation amount once, and then scale the result to match the actual input precip
   ! this seems to be the best trade-off between speed and quality
   ! JOK 2025-09-29
 
@@ -354,9 +354,12 @@ do  ! quality control loop
 
   i = i + 1
   
-  if (i > maxiter) then
+  if (i > maxiter .and. wetf > 1.) then
     write(0,*)'no solution could be found for precipitation'
+    write(0,*)pre,wetf,wetd,npd,qc
     stop
+  else ! situation with very low wet fraction, just assign last day of the month to be the wet day
+    pdm(ndm) = .true.
   end if
 
 end do  ! quality control loop
