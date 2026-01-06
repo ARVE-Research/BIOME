@@ -1,6 +1,6 @@
 &joboptions
-  climatefile     = '/home/terraces/projects/BIOME/inputdata/NAclimate.nc'
-  soilfile        = '/home/terraces/datasets/soils/NA5km/soils.nc'
+  climatefile     = '/work/kaplan_lab/datasets/climate/NA5km/climateNA5km.nc'
+  soilfile        = '/work/kaplan_lab/datasets/soils/NA5km/soilNA5km.nc'
   gridinfo%isproj = .true.
 /
 
