@@ -258,6 +258,10 @@ type metvars_monthly
 
   real(sp) :: mpet
   real(sp) :: swe ! snow water eqiv (mm)
+  real(sp) :: snow ! snowfall today (mm)
+  real(sp) :: melt	! snowmelt today (mm)
+  real(sp) :: fsnow ! snow fraction (0-1)
+  real(sp) :: Bsw ! shortwave albedo (0-1)
   real(sp) :: alpha
   real(sp) :: direct
   real(sp) :: diffuse

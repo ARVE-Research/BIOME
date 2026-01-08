@@ -38,6 +38,11 @@ integer, dimension(npft), parameter :: PFT   = [(m,m=1,13)]
 real(dp), dimension(2) :: xrange = [0.,0.]
 real(dp), dimension(2) :: yrange = [0.,0.]
 
+! ----
+! Declare separate variable IDs for snow vars
+integer :: varid_swe, varid_snow, varid_melt, varid_fsnow, varid_Bsw
+
+
 ! ----------------------
 
 call date_and_time(today,now)
@@ -286,24 +291,96 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
+
 ! ----
-! monthly swe
-
-ncstat = nf90_def_var(ofid,'swe',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+! monthly SWE
+ncstat = nf90_def_var(ofid,'swe',nf90_float,[dimids(1),dimids(2),dimids(4)],varid_swe, &
+                      chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'long_name','snow water equivalent')
+ncstat = nf90_put_att(ofid,varid_swe,'long_name','snow water equivalent')
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'units','mm')
+ncstat = nf90_put_att(ofid,varid_swe,'units','mm')
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+ncstat = nf90_put_att(ofid,varid_swe,'_FillValue',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+ncstat = nf90_put_att(ofid,varid_swe,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
+! ----
+! monthly snow (daily snowfall)
+ncstat = nf90_def_var(ofid,'snow',nf90_float,[dimids(1),dimids(2),dimids(4)],varid_snow, &
+                      chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_snow,'long_name','daily snowfall')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_snow,'units','mm')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_snow,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_snow,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly snowmelt
+ncstat = nf90_def_var(ofid,'melt',nf90_float,[dimids(1),dimids(2),dimids(4)],varid_melt, &
+                      chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_melt,'long_name','snowmelt')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_melt,'units','mm')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_melt,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_melt,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly snow fraction
+ncstat = nf90_def_var(ofid,'fsnow',nf90_float,[dimids(1),dimids(2),dimids(4)],varid_fsnow, &
+                      chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_fsnow,'long_name','snow fraction')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_fsnow,'units','fraction')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_fsnow,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_fsnow,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly snow albedo
+ncstat = nf90_def_var(ofid,'Bsw',nf90_float,[dimids(1),dimids(2),dimids(4)],varid_Bsw, &
+                      chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_Bsw,'long_name','snow albedo')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_Bsw,'units','fraction')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_Bsw,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid_Bsw,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
 ! monthly alpha

@@ -500,6 +500,11 @@ mmet%mpet  = 0.
 mmet%alpha = 0.
 mmet%direct  = 0.
 mmet%diffuse = 0.
+mmet%swe  = 0.
+mmet%snow  = 0.
+mmet%melt  = 0.
+mmet%fsnow  = 0.
+mmet%Bsw  = 0.
 
 pixel%gdd0 = 0.
 pixel%gdd5 = 0.
@@ -584,6 +589,21 @@ do m = 1,nmos
 
       ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
       
+      ! debug swe
+      
+      !call snow(pixel(i),dmet0(i))
+
+      ! if (i == 1 .and. m == 1 .and. d == 1) then
+ 		! write(0,*) 'DEBUG tday:', dmet0(i)%tday
+ 		! write(0,*) 'DEBUG prec:', dmet0(i)%prec
+ 		! write(0,*) 'DEBUG snow:', dmet0(i)%snow
+	    ! write(0,*) 'DEBUG melt:', dmet0(i)%melt
+  		! write(0,*) 'DEBUG swe :', dmet0(i)%swe
+	  ! end if
+
+
+      call soilwater(dmet0(i),soilw(i))
+
       ! monthly summaries
 
       mmet(i,m)%direct  = mmet(i,m)%direct  + dmet0(i)%rdirect  / real(ndm(m))
@@ -592,6 +612,10 @@ do m = 1,nmos
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet0(i)%dpet
       mmet(i,m)%alpha = mmet(i,m)%alpha + dmet0(i)%alpha / real(ndm(m))
       mmet(i,m)%swe  = mmet(i,m)%swe  + dmet0(i)%swe
+      mmet(i,m)%snow = mmet(i,m)%snow + dmet0(i)%snow / real(ndm(m))
+      mmet(i,m)%melt = mmet(i,m)%melt + dmet0(i)%melt / real(ndm(m))
+      mmet(i,m)%fsnow = mmet(i,m)%fsnow + dmet0(i)%fsnow / real(ndm(m))
+      mmet(i,m)%Bsw = mmet(i,m)%Bsw + dmet0(i)%Bsw / real(ndm(m))
 
 
       pixel(i)%gdd5 = pixel(i)%gdd5 + max(dmet0(i)%tday - 5.,0.)
@@ -641,7 +665,11 @@ call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
-call writereal3d(ofid,gridinfo,pixel,'swe',mmet%swe)
+call writereal3d(ofid,gridinfo,pixel,'swe',  mmet%swe)
+call writereal3d(ofid,gridinfo,pixel,'snow', mmet%snow)
+call writereal3d(ofid,gridinfo,pixel,'melt', mmet%melt)
+call writereal3d(ofid,gridinfo,pixel,'fsnow',mmet%fsnow)
+call writereal3d(ofid,gridinfo,pixel,'Bsw',  mmet%Bsw)
 
 
 call writereal2d(ofid,gridinfo,pixel,'tcm',pixel%tcm)

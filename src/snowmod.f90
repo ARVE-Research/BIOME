@@ -10,6 +10,7 @@ contains
 
 subroutine snow(pixel,dmet)
 
+
 ! calculate daily snow dynamics
 
 use parametersmod, only : sp,B0
