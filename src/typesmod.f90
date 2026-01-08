@@ -257,6 +257,7 @@ end type metvars_daily
 type metvars_monthly
 
   real(sp) :: mpet
+  real(sp) :: swe ! snow water eqiv (mm)
   real(sp) :: alpha
   real(sp) :: direct
   real(sp) :: diffuse

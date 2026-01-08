@@ -591,6 +591,8 @@ do m = 1,nmos
 
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet0(i)%dpet
       mmet(i,m)%alpha = mmet(i,m)%alpha + dmet0(i)%alpha / real(ndm(m))
+      mmet(i,m)%swe  = mmet(i,m)%swe  + dmet0(i)%swe
+
 
       pixel(i)%gdd5 = pixel(i)%gdd5 + max(dmet0(i)%tday - 5.,0.)
       pixel(i)%gdd0 = pixel(i)%gdd0 + max(dmet0(i)%tday,0.)
@@ -639,6 +641,8 @@ call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
+call writereal3d(ofid,gridinfo,pixel,'swe',mmet%swe)
+
 
 call writereal2d(ofid,gridinfo,pixel,'tcm',pixel%tcm)
 call writereal2d(ofid,gridinfo,pixel,'twm',pixel%twm)

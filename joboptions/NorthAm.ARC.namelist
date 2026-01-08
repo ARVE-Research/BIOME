@@ -6,8 +6,7 @@
 
 ! sample run commands:
 
-! src/biome1 NorthAm.Shorea.namelist -2117500/-617500/-1392500/-112500 western3.nc
-! src/biome1 NorthAm.Shorea.namelist -2117500/-1337500/-2012500/-372500 california3.nc
+! src/biome1 joboptions/NorthAm.ARC.namelist -2117500/-1337500/-2012500/-372500 output/california.nc
 
 
 ! coordinate windows:
