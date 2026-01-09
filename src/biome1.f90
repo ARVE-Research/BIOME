@@ -176,7 +176,7 @@ if (ncells == 1) then
 
   outfile_text = 'output/dmet_'//trim(replace(coordstring,['/'],'_'))//'.txt'
   
-  write(0,*)' running in point mode, so opening text output file: ',outfile_text
+  write(0,*)'NB running in point mode, so opening text output file: ',outfile_text
   
   open(dmetfile_unit,file=outfile_text,status='unknown')  ! open a text file to store time series output
 

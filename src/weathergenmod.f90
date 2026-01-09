@@ -290,7 +290,7 @@ allocate(pdm(ndm))
 
 wetd = max(nint(wetf * real(ndm)),1)
 
-write(0,'(a,f10.6,f5.2,i5)')'wetd calculated ',wetf,wetf * real(ndm),wetd
+! write(0,'(a,f10.6,f5.2,i5)')'wetd calculated ',wetf,wetf * real(ndm),wetd
 
 i = 1
 
