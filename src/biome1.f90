@@ -411,7 +411,7 @@ do m = 1,nmos
       y = pixel(i)%y
 
       met_in(i)%prec = climate(x,y,m)%pre
-      met_in(i)%wetf = climate(x,y,m)%wet * 0.01
+      met_in(i)%wetf = climate(x,y,m)%wet
 
       call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
       
@@ -538,7 +538,7 @@ do m = 1,nmos
     y = pixel(i)%y
 
     met_in(i)%prec = climate(x,y,m)%pre
-    met_in(i)%wetf = climate(x,y,m)%wet * 0.01
+    met_in(i)%wetf = climate(x,y,m)%wet
 
     call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
     
