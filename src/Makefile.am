@@ -9,6 +9,7 @@ biome1_SOURCES =       \
   typesmod.f90         \
   coordsmod.f90        \
   readdatamod.f90      \
+  tsoutputmod.f90      \
   netcdfoutputmod.f90  \
   physicsmod.f90       \
   orbitmod.f90         \

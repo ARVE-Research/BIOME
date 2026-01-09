@@ -827,4 +827,34 @@ end subroutine overprint
 
 ! ---------------------------------------------------------
 
+pure function replace(string, charset, target_char) result(res)
+
+! helper function to replace a character (or characters) in a string with another character
+! based on fpm_strings.f90 (Fortran Package Manager fpm)
+
+implicit none
+
+character(*), intent(in) :: string
+character,    intent(in) :: charset(:)
+character,    intent(in) :: target_char
+
+character(len(string)) :: res
+integer :: n
+
+! ---
+
+res = string
+
+do n = 1, len(string)
+
+  if (any(string(n:n) == charset)) then
+    res(n:n) = target_char
+  end if
+
+end do
+
+end function replace
+
+! ---------------------------------------------------------
+
 end module utilitymod

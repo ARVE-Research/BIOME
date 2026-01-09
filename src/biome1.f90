@@ -1,11 +1,11 @@
 program biome1
 
-use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing !,present_mon_noleap
+use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,dmetfile_unit !,present_mon_noleap
 use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
 use netcdfoutputmod
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
@@ -20,6 +20,7 @@ use radiationmod,    only : radpet
 use soilwatermod,    only : calcwhc,soilwater
 use snowmod,         only : Tt,snow
 use calcbiomemod,    only : calcbiome
+use tsoutputmod,     only : writedailymetvars
 
 implicit none
 
@@ -28,6 +29,7 @@ character(200) :: terrainfile
 character(200) :: climatefile
 character(200) :: soilfile
 character(200) :: outfile
+character(200) :: outfile_text
 
 character(60) :: coordstring
 
@@ -51,6 +53,8 @@ type(soiltype),        allocatable, dimension(:,:,:) :: soil
 
 real(sp), allocatable, dimension(:) :: tmin
 real(sp), allocatable, dimension(:) :: tmax
+
+logical :: itsopen
 
 integer :: ncells
 
@@ -164,6 +168,22 @@ write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 allocate(pixel(ncells))
 
 allocate(mmet(ncells,12))  ! monthly output
+
+! ---------------------------------
+! setup for a text outputfile if running in point (single-pixel) mode
+
+if (ncells == 1) then
+
+  outfile_text = 'output/dmet_'//trim(replace(coordstring,['/'],'_'))//'.txt'
+  
+  write(0,*)' running in point mode, so opening text output file: ',outfile_text
+  
+  open(dmetfile_unit,file=outfile_text,status='unknown')  ! open a text file to store time series output
+
+end if
+
+! ---------------------------------
+! initialize valid pixels
 
 i = 1
 
@@ -467,12 +487,11 @@ do m = 1,nmos
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet0(i),soilw(i))
-      
-!       write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow, & 
-!                 dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
-      
-      ! write(0,*)soilw(i)
 
+      ! daily output to text file, if running a single pixel
+      
+      ! if (ncells == 1) call writedailymetvars(m,d,dmet0(i))
+      
       ! store today's meteorology for tomorrow
 
       dmet1(i)%swe   = dmet0(i)%swe
@@ -585,24 +604,11 @@ do m = 1,nmos
       
       call soilwater(dmet0(i),soilw(i))
 
-      ! write(*,'(2i5,3f7.1)')m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec
-
-      ! write(0,*)m,d,dmet0(i)%tday,dmet0(i)%tnight,dmet0(i)%prec,dmet0(i)%snow,dmet0(i)%melt,dmet0(i)%swe,dmet0(i)%fsnow,dmet0(i)%asnow,dmet0(i)%Bsw
-      
-      ! debug swe
-      
-      !call snow(pixel(i),dmet0(i))
-
-      ! if (i == 1 .and. m == 1 .and. d == 1) then
- 		! write(0,*) 'DEBUG tday:', dmet0(i)%tday
- 		! write(0,*) 'DEBUG prec:', dmet0(i)%prec
- 		! write(0,*) 'DEBUG snow:', dmet0(i)%snow
-	    ! write(0,*) 'DEBUG melt:', dmet0(i)%melt
-  		! write(0,*) 'DEBUG swe :', dmet0(i)%swe
-	  ! end if
-
-
       call soilwater(dmet0(i),soilw(i))
+
+      ! daily output to text file, if running a single pixel
+      
+      if (ncells == 1) call writedailymetvars(m,d,dmet0(i))
 
       ! monthly summaries
 
@@ -682,6 +688,10 @@ call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 
 ! ---------------------------------
+
+inquire(unit=dmetfile_unit,opened=itsopen)
+
+if (itsopen) close(dmetfile_unit)
 
 call closeoutput(ofid)
 

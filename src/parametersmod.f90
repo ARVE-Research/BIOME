@@ -14,6 +14,7 @@ integer, parameter :: dp = real64  ! 8 byte real
 integer, parameter :: stdin  = input_unit
 integer, parameter :: stdout = output_unit
 integer, parameter :: stderr = error_unit
+integer, parameter :: dmetfile_unit = 100
 
 integer(i2), parameter :: imissing = -32768
 real(sp),    parameter :: rmissing =  -9999.
