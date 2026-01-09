@@ -17,4 +17,6 @@ Copy the sample run parameters namelist to a local file and edit the pathnames t
 
 Sample run command:
 
-`src/biome1 NorthAm.local.namelist -2117500/-617500/-1392500/-112500 test.nc`
+`src/biome1 joboptions/NorthAm.local.namelist -2117500/-617500/-1392500/-112500 output/test.nc`
+
+If only a single pixel is run – this is done by specifing only an `xcoord/ycoord` on the command line – the model will additionally output a text file containing selected daily meteorological variables with the filename `dmet_xcoord_ycoord.txt`. A sample plotting script for visualizing this timeseries is providied in `output/plotweather2.sh`.
