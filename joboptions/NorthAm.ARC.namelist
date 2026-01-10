@@ -1,6 +1,7 @@
 &joboptions
   climatefile     = '/work/kaplan_lab/datasets/climate/NA5km/climateNA5km.nc'
   soilfile        = '/work/kaplan_lab/datasets/soils/NA5km/soilNA5km.nc'
+  terrainfile     = '/work/kaplan_lab/datasets/inputdata_northam/NAtopo_v2024.nc'
   gridinfo%isproj = .true.
 /
 

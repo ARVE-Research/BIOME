@@ -19,6 +19,8 @@ type(metvars_daily), intent(in) :: dmet
 
 write(dmetfile_unit,*)m,d,dmet%tday,dmet%tnight,dmet%prec,dmet%snow,dmet%melt,dmet%swe,dmet%fsnow,dmet%asnow,dmet%Bsw
 
+! write(dmetfile_unit,*)m,d,dmet
+
 end subroutine writedailymetvars
 
 ! ----------------------------------------------------------------------------------------------------------------
