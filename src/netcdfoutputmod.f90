@@ -527,6 +527,60 @@ ncstat = nf90_put_att(ofid,varid,'missing_value',imissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
+! slope
+
+ncstat = nf90_def_var(ofid,'slope',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','median terrain slope')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','m m-1')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! elevation standard deviation
+
+ncstat = nf90_def_var(ofid,'elev_stdev',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','standard deviation of elevation')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','m')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! slope standard deviation
+
+ncstat = nf90_def_var(ofid,'slope_stdev',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','standard deviation of terrain slope')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','m m-1')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
 
 ncstat = nf90_enddef(ofid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
@@ -795,5 +849,32 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 end subroutine closeoutput
 
 ! -----------------------------------------------------
+
+subroutine writeterrain_real2d(ofid,gridinfo,varname,ovar)
+
+use parametersmod, only : sp
+use typesmod,      only : gridinfotype
+use netcdf
+use errormod,      only : ncstat,netcdf_err
+
+implicit none
+
+integer,                  intent(in) :: ofid
+type(gridinfotype),       intent(in) :: gridinfo
+character(*),             intent(in) :: varname
+real(sp), dimension(:,:), intent(in) :: ovar
+
+integer :: varid
+
+ncstat = nf90_inq_varid(ofid,varname,varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_var(ofid,varid,ovar)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+end subroutine writeterrain_real2d
+
+! -----------------------------------------------------
+
 
 end module netcdfoutputmod

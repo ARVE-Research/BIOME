@@ -41,25 +41,30 @@ awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$5}' $infile | gmt psxy -R -J
 # LOWER GRAPH
 # snow water equivalent (mm) 
 
-gmt psbasemap  -R$t0/$t1/0/400 -JX20/10 -Bpya -BESn -Y-11 -O -P -K >> $output
+#gmt psbasemap  -R$t0/$t1/0/400 -JX20/10 -Bpya -BESn -Y-11 -O -P -K >> $output
 
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$8}' $infile | gmt psxy -R -J -Sb0.02 -Wthin,slategray1 -O -P -K >> $output
+#awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$8}' $infile | gmt psxy -R -J -Sb0.02 -Wthin,slategray1 -O -P -K >> $output
 
 # snow melt (mm)
 
-gmt psbasemap  -R$t0/$t1/0/400 -JX20/10 -Bpya -BESn -O -P -K >> $output
+gmt psbasemap  -R$t0/$t1/0/200 -JX20/10 -Bpya -BESn -Y-11 -O -P -K >> $output
 
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$7}' $infile | gmt psxy -R -J -Sb0.02 -Wthin,lightred -O -P -K >> $output
 
 # daily snow accumulation (mm)
-gmt psbasemap  -R$t0/$t1/0/400 -JX20/10 -Bpya -BESn -O -P -K >> $output
+gmt psbasemap  -R$t0/$t1/0/200 -JX20/10 -Bpya -BESn -O -P -K >> $output
 
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$6}' $infile | gmt psxy -R -J -Sb0.02 -Wthin,dodgerblue -O -P -K >> $output
  
 # fsnow fractional snow cover (0–1)
 gmt psbasemap -R$t0/$t1/0/1 -JX20/10 -Bpya0.1f0.1 -BW -O -P -K >> "$output"
 
-awk '{printf "2021-%02i-%02iT6:00:00 %lg\n",$1,$2,$9}' $infile | gmt psxy -R -J -Wthick,slateblue2 -O -P >> "$output"  # last layer, no -K
+awk '{printf "2021-%02i-%02iT6:00:00 %lg\n",$1,$2,$9}' $infile | gmt psxy -R -J -Wthick,violetred -O -P -K >> "$output"  # last layer, no -K
+
+# Bsw albedo (0–1)
+gmt psbasemap -R$t0/$t1/0/1 -JX20/10 -Bpya0.1f0.1 -BW -O -P -K >> "$output"
+
+awk '{printf "2021-%02i-%02iT6:00:00 %lg\n",$1,$2,$11}' $infile | gmt psxy -R -J -Wthick,chartreuse2 -O -P >> "$output"  # last layer, no -K
 
 # ---
 
