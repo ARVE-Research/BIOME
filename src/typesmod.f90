@@ -61,6 +61,7 @@ type pixeltype
   real(sp) :: gdd0   ! growing degree days on a 0-degree base (degC)
   real(sp) :: awm    ! alpha of the warmest month (fraction)
   real(sp) :: aalpha ! mean annual alpha (fraction)
+  real(sp) :: Nmelt  ! depletion curve shape parameter
 
   integer :: wm
   integer(i2) :: biome
@@ -241,6 +242,7 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: melt
 
   real(sp) :: swe       ! snow water equivalent (mm)
+  real(sp) :: swe_max   ! maximum SWE this season (mm)
   real(sp) :: psnow     ! snow density ()
   real(sp) :: hsnow     ! snow depth (cm)
   real(sp) :: fsnow     ! snow areal cover (fraction)

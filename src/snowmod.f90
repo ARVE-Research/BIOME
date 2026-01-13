@@ -1,5 +1,7 @@
 module snowmod
 
+use parametersmod, only : sp, pi
+
 implicit none
 
 public :: Tt
@@ -13,7 +15,7 @@ subroutine snow(pixel,dmet)
 
 ! calculate daily snow dynamics
 
-use parametersmod, only : sp,B0
+use parametersmod, only : B0
 use typesmod,      only : pixeltype,metvars_daily
 
 implicit none
@@ -27,7 +29,7 @@ type(metvars_daily), intent(inout) :: dmet    ! daily meteorological variables
 
 real(sp), parameter :: k11   =   0.443
 real(sp), parameter :: k12   =   0.895
-real(sp), parameter :: swec  = 140.     ! minimum snow-water equivalent for full snow cover (Sandoval et al., 2024)
+! real(sp), parameter :: swec  = 140.     ! minimum snow-water equivalent for full snow cover (Sandoval et al., 2024)
 real(sp), parameter :: B0snw =   0.85   ! albedo of fresh snow
 
 ! local variables
@@ -35,6 +37,11 @@ real(sp), parameter :: B0snw =   0.85   ! albedo of fresh snow
 real(sp) :: snowfall_day
 real(sp) :: snowfall_night
 real(sp) :: Bsnw
+real(sp) :: swe_old       ! track if accumulation or melt
+
+! ----
+! Store old SWE to determine if accumulation or melt occurred
+swe_old = dmet%swe     
 
 ! ----
 ! snowfall
@@ -81,9 +88,30 @@ else
   dmet%melt = 0.
 end if
 
+! ---------
 ! snow cover fraction
 
-dmet%fsnow = dmet%swe / (swec + dmet%swe)  ! eqn. 27
+! dmet%fsnow = dmet%swe / (swec + dmet%swe)  ! eqn. 27
+
+! snow cover fraction - Swenson & Lawrence (2012)
+
+if (dmet%swe <= 0.) then
+  ! No snow - reset everything
+  dmet%swe_max = 0.
+  dmet%fsnow = 0.
+else if (dmet%swe > swe_old) then
+  ! ACCUMULATION - assume full coverage
+  dmet%fsnow = 1.0
+  dmet%swe_max = dmet%swe
+!   write(0,*)'ACCUM: swe=',dmet%swe,' fsnow=',dmet%fsnow,' swe_max=',dmet%swe_max  ! ADD THIS
+else
+  ! MELT - use depletion curve (eq. 4)
+!   write(0,*)'MELT: swe_old=',swe_old,' swe=',dmet%swe,' swe_max=',dmet%swe_max,' Nmelt=',pixel%Nmelt  ! ADD THIS
+  call calc_snow_cover_fraction(pixel, dmet)
+!   write(0,*)'MELT result: fsnow=',dmet%fsnow  ! ADD THIS
+end if
+
+! ---------
 
 ! snowpack age and albedo
 
@@ -120,6 +148,37 @@ end if
 
 end subroutine snow
 
+! ---------------------------------------
+! UNDER CONSTRUCTION ---- NEW SUBROUTINE FOR SNOW COVER FRACTION
+subroutine calc_snow_cover_fraction(pixel, dmet)
+
+! Calculate snow cover fraction during melt using Swenson & Lawrence (2012) eq. 4
+
+use parametersmod, only : sp, pi
+use typesmod,      only : pixeltype, metvars_daily
+
+implicit none
+
+type(pixeltype),     intent(in)    :: pixel
+type(metvars_daily), intent(inout) :: dmet
+
+real(sp) :: rel_swe     ! relative SWE (W/Wmax)
+
+! ----
+
+if (dmet%swe_max > 0.) then
+  rel_swe = dmet%swe / dmet%swe_max
+  rel_swe = max(0., min(1., rel_swe))  ! constrain to [0,1]
+  
+  ! Inverse cosine depletion curve (eq. 4)
+  dmet%fsnow = 1. - (1./pi * acos(2. * rel_swe - 1.))**pixel%Nmelt
+  
+  dmet%fsnow = max(0., min(1., dmet%fsnow))
+else
+  dmet%fsnow = 0.
+end if
+
+end subroutine calc_snow_cover_fraction
 ! ---------------------------------------
 
 real(sp) function Tt(z,phi)
