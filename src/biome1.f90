@@ -504,7 +504,7 @@ do m = 1,nmos
 
       ! daily output to text file, if running a single pixel
       
-      if (ncells == 1) call writedailymetvars(m,d,dmet0(i))
+!       if (ncells == 1) call writedailymetvars(m,d,dmet0(i))
       
       ! store today's meteorology for tomorrow
 
