@@ -38,18 +38,18 @@ type(orbitpars)    :: orbit
 type(solarpars)    :: solar
 type(calendartype) :: cal
 
-type(soilcoordstype),  allocatable, dimension(:)     :: soilcoords
-type(pixeltype),       allocatable, dimension(:)     :: pixel
+type(soilcoordstype),  allocatable, dimension(:)     :: soilcoords  ! soil vertical discretization, same for all pixels
+type(pixeltype),       allocatable, dimension(:)     :: pixel       ! pixel-level state variables: valid gridcells
 type(metvars_in),      allocatable, dimension(:)     :: met_in
 type(coordstype),      allocatable, dimension(:,:)   :: coords
-type(terraintype),     allocatable, dimension(:,:)   :: terrain
-type(dayclimatetype),  allocatable, dimension(:,:)   :: daily
-type(soilwatertype),   allocatable, dimension(:)     :: soilw
-type(metvars_daily),   allocatable, dimension(:)     :: dmet0  ! current day meteorology
-type(metvars_daily),   allocatable, dimension(:)     :: dmet1  ! next day meteorology
-type(metvars_monthly), allocatable, dimension(:,:)   :: mmet
-type(monclimatetype),  allocatable, dimension(:,:,:) :: climate
-type(soiltype),        allocatable, dimension(:,:,:) :: soil
+type(terraintype),     allocatable, dimension(:,:)   :: terrain     ! land fraction and terrain properties: rectangular grid 
+type(dayclimatetype),  allocatable, dimension(:,:)   :: daily       ! smoothed, pseudo-daily temperature, cloud, and wind: valid gridcells x days of the year
+type(soilwatertype),   allocatable, dimension(:)     :: soilw       ! soil water status: single bucket, all valid gridcells
+type(metvars_daily),   allocatable, dimension(:)     :: dmet0       ! current day meteorology
+type(metvars_daily),   allocatable, dimension(:)     :: dmet1       ! next day meteorology
+type(metvars_monthly), allocatable, dimension(:,:)   :: mmet        ! monthly summary meteorology: valid gridcells x 12 months
+type(monclimatetype),  allocatable, dimension(:,:,:) :: climate     ! input monthly climate data, rectangular grid
+type(soiltype),        allocatable, dimension(:,:,:) :: soil        ! soil physical properties, grid
 
 real(sp), allocatable, dimension(:) :: tmin
 real(sp), allocatable, dimension(:) :: tmax

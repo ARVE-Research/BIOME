@@ -81,9 +81,9 @@ type terraintype
   real(sp) :: landf
   real(sp) :: waterf
   real(sp) :: icef
-  real(sp) :: thickness  ! soil and regolith thickness (m)
-  real(sp) :: slope      ! median terrain slope (m m-1)
-  real(sp) :: elev_stdev ! standard deviation of elevation (m)
+  real(sp) :: thickness   ! soil and regolith thickness (m)
+  real(sp) :: slope       ! median terrain slope (m m-1)
+  real(sp) :: elev_stdev  ! standard deviation of elevation (m)
   real(sp) :: slope_stdev ! standard deviation of slope (m m-1)
 end type terraintype
 

@@ -6,9 +6,13 @@ public :: pos
 public :: matsol
 public :: roundto
 public :: tridiag
+public :: spline
 public :: cubspline
 public :: angleinterp
+public :: leapyear
+public :: bp2ce
 public :: overprint
+public :: replace
 
 interface pos
   module procedure pos_sp
@@ -277,74 +281,6 @@ end function roundto_v
 
 ! ---------------------------------------------------------
 
-subroutine tridiag_sp(a,b,c,r,u)
-
-! linear solver for tridiagonal matrices
-! based on Numerical Recipes
-
-use parametersmod, only : sp
-
-implicit none
-
-! arguments
-
-real(sp), dimension(:), intent(in)  :: a  ! left-side off-diagonal vector, size b(n-1)
-real(sp), dimension(:), intent(in)  :: b  ! diagonal vector
-real(sp), dimension(:), intent(in)  :: c  ! right-side off-diagonal vector, size b(n-1)
-real(sp), dimension(:), intent(in)  :: r  ! right-hand side, size b(n)
-real(sp), dimension(:), intent(out) :: u  ! result vector, size b(n)
-
-! local variables
-
-real(sp), dimension(size(b)) :: gam
-
-integer  :: n
-integer  :: j
-real(sp) :: bet
-
-! ----
-! setup
-
-n = size(b)
-
-bet = b(1)
-
-if (bet == 0.) then
-  write(0,*)'error tridiag: first element of diagonal vector cannot be zero'
-  stop
-end if
-
-u(1) = r(1) / bet
-
-! decomposition and forward substitution step
-
-do j = 2,n  
-
-  gam(j) = c(j-1) / bet
-
-  bet = b(j) - a(j-1) * gam(j)
-
-  if (bet == 0.) then
-    write(0,*)'error tridiag: beta = 0'
-    stop
-  end if
-
-  u(j) = (r(j) - a(j-1) * u(j-1)) / bet
-    
-end do
-
-! backsubstitution step
-
-do j = n-1,1,-1
-
-  u(j) = u(j) - gam(j+1) * u(j+1)
-
-end do
-
-end subroutine tridiag_sp
-
-! ---------------------------------------------------------
-
 subroutine spline_sp(x,y,yp1,ypn,y2)
 
 ! create a spline object for interpolation
@@ -472,6 +408,74 @@ b = (x - xa(klo)) / h
 cubspline_sp = a * ya(klo) + b * ya(khi) + ((a**3 - a) * y2a(klo) + (b**3 - b) * y2a(khi)) * (h**2) / 6.
 
 end function cubspline_sp
+
+! ---------------------------------------------------------
+
+subroutine tridiag_sp(a,b,c,r,u)
+
+! linear solver for tridiagonal matrices
+! based on Numerical Recipes
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), dimension(:), intent(in)  :: a  ! left-side off-diagonal vector, size b(n-1)
+real(sp), dimension(:), intent(in)  :: b  ! diagonal vector
+real(sp), dimension(:), intent(in)  :: c  ! right-side off-diagonal vector, size b(n-1)
+real(sp), dimension(:), intent(in)  :: r  ! right-hand side, size b(n)
+real(sp), dimension(:), intent(out) :: u  ! result vector, size b(n)
+
+! local variables
+
+real(sp), dimension(size(b)) :: gam
+
+integer  :: n
+integer  :: j
+real(sp) :: bet
+
+! ----
+! setup
+
+n = size(b)
+
+bet = b(1)
+
+if (bet == 0.) then
+  write(0,*)'error tridiag: first element of diagonal vector cannot be zero'
+  stop
+end if
+
+u(1) = r(1) / bet
+
+! decomposition and forward substitution step
+
+do j = 2,n  
+
+  gam(j) = c(j-1) / bet
+
+  bet = b(j) - a(j-1) * gam(j)
+
+  if (bet == 0.) then
+    write(0,*)'error tridiag: beta = 0'
+    stop
+  end if
+
+  u(j) = (r(j) - a(j-1) * u(j-1)) / bet
+    
+end do
+
+! backsubstitution step
+
+do j = n-1,1,-1
+
+  u(j) = u(j) - gam(j+1) * u(j+1)
+
+end do
+
+end subroutine tridiag_sp
 
 ! ---------------------------------------------------------
 
