@@ -49,7 +49,7 @@ type(metvars_daily),   allocatable, dimension(:)     :: dmet0       ! current da
 type(metvars_daily),   allocatable, dimension(:)     :: dmet1       ! next day meteorology
 type(metvars_monthly), allocatable, dimension(:,:)   :: mmet        ! monthly summary meteorology: valid gridcells x 12 months
 type(monclimatetype),  allocatable, dimension(:,:,:) :: climate     ! input monthly climate data, rectangular grid
-type(soiltype),        allocatable, dimension(:,:,:) :: soil        ! soil physical properties, grid
+type(soiltype),        allocatable, dimension(:,:,:) :: soil        ! soil physical properties, rectangular grid x layers
 
 real(sp), allocatable, dimension(:) :: tmin
 real(sp), allocatable, dimension(:) :: tmax
