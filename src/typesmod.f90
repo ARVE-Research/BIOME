@@ -236,6 +236,8 @@ type metvars_daily  ! structure for weather generator output (daily)
   
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet
+  real(sp) :: soilw     ! soil water content (mm)
+  real(sp) :: relsat    ! relative saturation w/whc (0-1)
   
   real(sp) :: rain
   real(sp) :: snow

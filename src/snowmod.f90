@@ -103,10 +103,10 @@ else if (dmet%swe > swe_old) then
   ! ACCUMULATION - assume full coverage
   dmet%fsnow = 1.0
   dmet%swe_max = dmet%swe
-!   write(0,*)'ACCUM: swe=',dmet%swe,' fsnow=',dmet%fsnow,' swe_max=',dmet%swe_max  ! ADD THIS
+!   write(0,*)'ACCUM: swe=',dmet%swe,' fsnow=',dmet%fsnow,' swe_max=',dmet%swe_max 
 else
   ! MELT - use depletion curve (eq. 4)
-!   write(0,*)'MELT: swe_old=',swe_old,' swe=',dmet%swe,' swe_max=',dmet%swe_max,' Nmelt=',pixel%Nmelt  ! ADD THIS
+!   write(0,*)'MELT: swe_old=',swe_old,' swe=',dmet%swe,' swe_max=',dmet%swe_max,' Nmelt=',pixel%Nmelt  
   call calc_snow_cover_fraction(pixel, dmet)
 !   write(0,*)'MELT result: fsnow=',dmet%fsnow  ! ADD THIS
 end if

@@ -17,9 +17,23 @@ integer, intent(in)             :: m      ! month number
 integer, intent(in)             :: d      ! day number
 type(metvars_daily), intent(in) :: dmet
 
-write(dmetfile_unit,*)m,d,dmet%tday,dmet%tnight,dmet%prec,dmet%snow,dmet%melt,dmet%swe,dmet%fsnow,dmet%asnow,dmet%Bsw
-
-! write(dmetfile_unit,*)m,d,dmet
+  write(dmetfile_unit, *) m, d,       &
+    dmet%tday,   &   !  3 - daytime temperature (C)
+    dmet%tnight, &   !  4 - nighttime temperature (C)
+    dmet%prec,   &   !  5 - precipitation (mm)
+    dmet%snow,   &   !  6 - snowfall (mm)
+    dmet%melt,   &   !  7 - snowmelt (mm)
+    dmet%swe,    &   !  8 - snow water equivalent (mm)
+    dmet%fsnow,  &   !  9 - fractional snow cover (0-1)
+    dmet%asnow,  &   ! 10 - snow albedo
+    dmet%Bsw,    &   ! 11 - shortwave radiation albedo
+    dmet%alpha,  &   ! 12 - AET/PET ratio (0-1)
+    dmet%tdew,   &   ! 13 - dewpoint temperature (C)
+    dmet%aet,    &   ! 14 - actual evapotranspiration (mm)
+    dmet%soilw,  &   ! 15 - soil water content (mm)
+    dmet%relsat,  &   ! 16 - relative saturation w/whc (0-1)
+    dmet%dpet        ! 17 - daily PET (mm)
+    
 
 end subroutine writedailymetvars
 

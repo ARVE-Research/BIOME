@@ -127,6 +127,15 @@ else
   dmet%alpha = 1.
 end if
 
+! store soil water variables in dmet for output
+dmet%soilw = soilw%w
+
+if (soilw%whc > 0.) then
+  dmet%relsat = soilw%w / soilw%whc
+else
+  dmet%relsat = 0.
+end if
+
 ! write(0,*)'aet',dmet%dayl,supply,demand,dmet%aet,dmet%alpha
 
 end subroutine soilwater
