@@ -80,84 +80,98 @@ GDD0 = pixel%gdd0
 planttype = .false.
 
 
+! plant types: 1) tropical evergreen, 2) tropical raingreen
+! EDIT: calc independently so both can be true simultaneously
 if (tcm >= 15.5) then
   if (alpha >= 0.80) then
     planttype(1) = .true.
-  else if (alpha >=0.45 .and. alpha <= 0.95) then
-    planttype(2) = .true.
   end if
-end if
-
-if (tcm >= 5.0) then
-  if (alpha >= 0.43) then
-    planttype(3) = .true.
+  if (alpha >= 0.45 .and. alpha <= 0.95) then
+    planttype(2) = .true.
   end if
 end if
 
 
 !Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
 
-
+! plant type: 4) temperate summergreen
+! 0.65-->.33
 if (tcm >= -15 .and. tcm <=15.5) then
   if (GDD >= 1200) then
-  if (alpha >= 0.65) then
+  if (alpha >= 0.33) then
     planttype(4) = .true.
   end if
   end if
 end if
 
+! plant type: 5) cool-temp conifer
+! 0.65-->.33
 if (tcm >= -19 .and. tcm <= 5) then
   if (GDD >= 900) then
-  if (alpha >= 0.65) then
+  if (alpha >= 0.33) then
     planttype(5) = .true.
   end if
   end if
 end if
 
+! plant type: 6) boreal evergreen conifer
+! 0.75-->.38
 if (tcm >= -35 .and. tcm <= -2) then
   if (GDD >= 350) then
-  if (alpha >= 0.75) then
+  if (alpha >= 0.38) then
     planttype(6) = .true.
   end if
   end if
 end if 
 
+! plant type: 7) boreal summergreen
+! 0.65-->.33
 if (tcm <= 5) then 
   if (GDD >= 350) then
-  if (alpha >= 0.65) then
+  if (alpha >= 0.33) then
   planttype(7) = .true.
   end if
   end if
 end if
 
+! plant type: 8) sclerophyll/succulent
+!0.28-->.14
 if (tcm >= 5) then
-  if (alpha >= 0.28) then
+  if (alpha >= 0.14) then
   planttype(8) = .true.
   end if
 end if
 
+! plant type: 9) warm grass/shrub
+! 0.18-->.09
 if (twm >= 22) then
-  if (alpha >= 0.08) then
+  if (alpha >= 0.09) then
   planttype(9) = .true.
   end if
 end if
 
+! plant type: 10) cool grass/shrub
+! 0.33-->.17
 if (GDD >= 500) then
-  if (alpha >= 0.33) then
+  if (alpha >= 0.17) then
   planttype(10) = .true.
   end if
 end if
 
+! plant type: 11) cold grass/shrub
+! 0.33-->.17
 if (GDD0 >= 100) then
-  if (alpha >= 0.33) then
+  if (alpha >= 0.17) then
   planttype(11) = .true. 
   end if
 end if
 
+! plant type: 12) hot desert shrub
 if (twm >= 22) then
   planttype(12) = .true.
 end if
 
+! plant type: 13) cold desert shrub
 if (GDD0 >= 100) then
   planttype(13) = .true.
 end if
@@ -244,8 +258,20 @@ end if
 
 ! dominance class 6; planttypes #10 #11
 
-if (planttype(11)) then
-  if (.not. planttype(10)) then 
+! if (planttype(11)) then
+!   if (.not. planttype(10)) then 
+!     pixel%biome = 14
+!   else 
+!     pixel%biome = 13
+!   end if
+!   return
+! end if
+
+! dominance class 6; planttypes #10 #11
+! EDIT handle cases where only cool grass/shrub is present
+
+if (planttype(10) .or. planttype(11)) then
+  if (planttype(11) .and. .not. planttype(10)) then 
     pixel%biome = 14
   else 
     pixel%biome = 13
@@ -266,6 +292,9 @@ if (planttype(13)) then
   pixel%biome = 16
   return
 end if
+
+! Biome 17 for polar desert when no plant types present
+pixel%biome = 17
 
 end subroutine calcbiome
 
