@@ -482,9 +482,9 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      dmet0(i)%delta = solar%delta
-      dmet0(i)%rad0  = solar%rad0
-      dmet0(i)%dayl  = solar%dayl
+      dmet1(i)%delta = solar%delta
+      dmet1(i)%rad0  = solar%rad0
+      dmet1(i)%dayl  = solar%dayl
             
       ! calculate integrated day- and night-time temperature
       ! nighttime is goes into the next day, need to know tmin of the next day
