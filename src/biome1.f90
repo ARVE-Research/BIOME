@@ -143,8 +143,6 @@ call readcoords(climatefile,gridinfo,coords)
 
 call readterrain(climatefile,gridinfo,terrain)
 
-call readnewterrain(terrainfile,gridinfo,terrain) ! from new terrain file
-
 ! read the input data (monthly climate and soil)
 
 call readclimate(climatefile,gridinfo,climate)
@@ -200,11 +198,14 @@ do y = 1,cnty
     pixel(i)%lon = coords(x,y)%geolon
     pixel(i)%lat = coords(x,y)%geolat
     
-    pixel(i)%elv = terrain(x,y)%elv
-    
-    pixel(i)%slope  = 0. ! terrain(x,y)%slope
-    pixel(i)%aspect = 0. ! terrain(x,y)%aspect
-    
+    pixel(i)%landf      = terrain(x,y)%landf
+    pixel(i)%elv        = terrain(x,y)%elv
+    pixel(i)%slope      = terrain(x,y)%slope
+    pixel(i)%aspect     = terrain(x,y)%aspect
+    pixel(i)%cti        = terrain(x,y)%cti
+    pixel(i)%hand       = terrain(x,y)%hand
+    pixel(i)%elev_stdev = terrain(x,y)%elev_stdev
+        
     ! mean temperature of the coldest month
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
@@ -226,6 +227,8 @@ do y = 1,cnty
 
   end do
 end do
+
+deallocate(terrain)
 
 ! at this point should make a quick check for total memory requirement and take appropriate action if the amount is too large
 
@@ -279,8 +282,8 @@ do i = 1,ncells
   pixel(i)%Tt = Tt(pixel(i)%elv,pixel(i)%lat)
   
   ! Calculate Nmelt from topographic variability (Swenson & Lawrence 2012, eq. 5)
-  if (terrain(x,y)%elev_stdev > 0.) then
-    pixel(i)%Nmelt = 200. / terrain(x,y)%elev_stdev
+  if (pixel(i)%elev_stdev > 0.) then
+    pixel(i)%Nmelt = 200. / pixel(i)%elev_stdev
   else
     pixel(i)%Nmelt = 10.  ! default for flat areas
   end if
@@ -702,7 +705,6 @@ call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 
 call writeterrain_real2d(ofid,gridinfo,'slope',terrain%slope)
 call writeterrain_real2d(ofid,gridinfo,'elev_stdev',terrain%elev_stdev)
-call writeterrain_real2d(ofid,gridinfo,'slope_stdev',terrain%slope_stdev)
 
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 

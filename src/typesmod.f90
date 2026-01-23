@@ -42,20 +42,35 @@ end type coordstype
 ! ---
 
 type pixeltype
+
+  ! basic coordinates
   integer :: x       ! x position on 2D grid
   integer :: y       ! y position on 2D grid
   real(dp) :: lon    ! longitude (deg)
   real(dp) :: lat    ! latitude (deg)
   real(sp) :: phi    ! latitude (rad)
-  real(sp) :: elv    ! elevation (m)
+  ! integer, dimension(8) :: neighbors
+
+  ! terrain characteristics
+  real(sp) :: landf      ! part of gridcell that is ice-free land (fraction)
+  real(sp) :: elv        ! elevation above sea level (m)
+  real(sp) :: slope      ! terrain slope (m m-1)
+  real(sp) :: aspect     ! slope azimuth (north = 0) (degrees)
+  real(sp) :: cti        ! compound topographic index = log(upstream area / tan(local slope)) (index)
+  real(sp) :: hand       ! height above nearest drainage (m)
+  real(sp) :: elev_stdev ! standard deviation of elevation (m)
+  real(sp) :: thickness  ! soil and regolith thickness (m)
+
+  real(sp) :: sloperad   ! median slope inclination (rad)
+  real(sp) :: aspectrad  ! median slope orientation (rad), 0 = S, values increasing clockwise
+
+  ! meteorological variables
   real(sp) :: P      ! mean atmospheric pressure (Pa)
   real(sp) :: Ratm   ! relative atmospheric pressure
   real(sp) :: tcm    ! temperature of the coldest month
   real(sp) :: Pann   ! total annual precipitation
   real(sp) :: Pjj    ! precipitation equitability index
   real(sp) :: Tt     ! snow probability temperature (degC)
-  real(sp) :: slope  ! median slope inclination (rad)
-  real(sp) :: aspect ! median slope orientation (rad), 0 = S, values increasing clockwise
   real(sp) :: twm    ! temperature of the warmest month (degC)
   real(sp) :: gdd5   ! growing degree days on a 5-degree base (degC)
   real(sp) :: gdd0   ! growing degree days on a 0-degree base (degC)
@@ -63,13 +78,11 @@ type pixeltype
   real(sp) :: aalpha ! mean annual alpha (fraction)
   real(sp) :: Nmelt  ! depletion curve shape parameter
 
+  real(sp), dimension(40) :: dprec
+
+  ! other
   integer :: wm
   integer(i2) :: biome
-  
-  ! logical :: valid
-  ! integer, dimension(8) :: neighbors
-  
-  real(sp), dimension(40) :: dprec
   
 end type pixeltype
 
@@ -263,11 +276,11 @@ end type metvars_daily
 type metvars_monthly
 
   real(sp) :: mpet
-  real(sp) :: swe ! snow water eqiv (mm)
-  real(sp) :: snow ! snowfall today (mm)
-  real(sp) :: melt	! snowmelt today (mm)
-  real(sp) :: fsnow ! snow fraction (0-1)
-  real(sp) :: Bsw ! shortwave albedo (0-1)
+  real(sp) :: swe    ! snow water eqiv (mm)
+  real(sp) :: snow   ! snowfall today (mm)
+  real(sp) :: melt   ! snowmelt today (mm)
+  real(sp) :: fsnow  ! snow fraction (0-1)
+  real(sp) :: Bsw    ! shortwave albedo (0-1)
   real(sp) :: alpha
   real(sp) :: direct
   real(sp) :: diffuse
