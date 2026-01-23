@@ -141,7 +141,7 @@ allocate(soil(cntx,cnty,6))
 
 call readcoords(climatefile,gridinfo,coords)
 
-call readterrain(climatefile,gridinfo,terrain)
+call readterrain(terrainfile,gridinfo,terrain)
 
 ! read the input data (monthly climate and soil)
 
@@ -205,6 +205,7 @@ do y = 1,cnty
     pixel(i)%cti        = terrain(x,y)%cti
     pixel(i)%hand       = terrain(x,y)%hand
     pixel(i)%elev_stdev = terrain(x,y)%elev_stdev
+    pixel(i)%thickness  = terrain(x,y)%thickness
         
     ! mean temperature of the coldest month
 
@@ -275,7 +276,7 @@ do i = 1,ncells
   
   ! calculate the column-integrated soil water holding capacity
   
-  call calcwhc(terrain(x,y),soilcoords,soil(x,y,:),soilw(i))
+  call calcwhc(pixel(i)%thickness,soilcoords,soil(x,y,:),soilw(i))
   
   ! calculate the snow probability temperature Tt
   
@@ -703,8 +704,8 @@ call writereal2d(ofid,gridinfo,pixel,'GDD5',pixel%gdd5)
 call writereal2d(ofid,gridinfo,pixel,'awm',pixel%awm)
 call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 
-call writeterrain_real2d(ofid,gridinfo,'slope',terrain%slope)
-call writeterrain_real2d(ofid,gridinfo,'elev_stdev',terrain%elev_stdev)
+! call writeterrain_real2d(ofid,gridinfo,'slope',pixel%slope)
+! call writeterrain_real2d(ofid,gridinfo,'elev_stdev',pixel%elev_stdev)
 
 call writeinteger2d(ofid,gridinfo,pixel,'biome',pixel%biome)
 

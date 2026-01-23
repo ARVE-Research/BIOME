@@ -159,6 +159,9 @@ call getvar_i2(ncid,'cti',gridinfo,terrain%cti)
 call getvar_i2(ncid,'hand',gridinfo,terrain%hand)
 call getvar_i2(ncid,'elev_stdev',gridinfo,terrain%elev_stdev)
 
+ncstat = nf90_close(ncid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
 end subroutine readterrain
 
 ! -----------------------------------------------------
@@ -403,7 +406,7 @@ where (ivar /= missing_value) ovar = real(ivar) * scale_factor + add_offset
 actual_range(1) = minval(ovar,mask = ivar /= missing_value)
 actual_range(2) = maxval(ovar,mask = ivar /= missing_value)
 
-write(stderr,*)'reading ',trim(varname),actual_range
+write(stderr,*)'read ',trim(varname),actual_range
 
 end subroutine getvar_i2_2d
 

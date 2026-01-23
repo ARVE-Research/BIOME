@@ -6,7 +6,7 @@ contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine calcwhc(terrain,soilcoords,soil,soilw)
+subroutine calcwhc(thickness,soilcoords,soil,soilw)
 
 use parametersmod, only : sp
 use typesmod,      only : soilcoordstype,soiltype,soilwatertype,terraintype
@@ -16,7 +16,7 @@ implicit none
 
 ! arguments
 
-type(terraintype),                  intent(in) :: terrain
+real(sp),                           intent(in) :: thickness
 type(soilcoordstype), dimension(:), intent(in) :: soilcoords
 type(soiltype),       dimension(:), intent(inout) :: soil
 type(soilwatertype),                intent(out)   :: soilw
@@ -38,7 +38,7 @@ nl = size(soilcoords)
 
 soil%dz = soilcoords%dz
 
-depthT = terrain%thickness * 100.  ! convert m to cm
+depthT = thickness * 100.  ! convert m to cm
 
 lb = soilcoords%bnds(2)
 
