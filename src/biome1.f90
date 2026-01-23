@@ -163,7 +163,7 @@ call genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 ! ---------------------------------
 ! check for valid pixels
 
-ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing)
+ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing .and. terrain(:,:)%thickness > 0.)
 
 write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
@@ -192,7 +192,7 @@ i = 1
 do y = 1,cnty
   do x = 1,cntx
 
-    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing) cycle
+    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
     
     pixel(i)%x = x
     pixel(i)%y = y
@@ -287,7 +287,6 @@ do i = 1,ncells
   
   ! Constrain Nmelt to reasonable range
   pixel(i)%Nmelt = max(0.25, min(pixel(i)%Nmelt, 10.0))
-  
   
 end do
 
