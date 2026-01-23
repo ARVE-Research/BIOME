@@ -76,15 +76,14 @@ end type pixeltype
 ! ---
 
 type terraintype
-  real(sp) :: elv
-  real(sp) :: cti
-  real(sp) :: landf
-  real(sp) :: waterf
-  real(sp) :: icef
-  real(sp) :: thickness   ! soil and regolith thickness (m)
-  real(sp) :: slope       ! median terrain slope (m m-1)
-  real(sp) :: elev_stdev  ! standard deviation of elevation (m)
-  real(sp) :: slope_stdev ! standard deviation of slope (m m-1)
+  real(sp) :: landf      ! part of gridcell that is ice-free land (fraction)
+  real(sp) :: elv        ! elevation above sea level (m)
+  real(sp) :: slope      ! terrain slope (m m-1)
+  real(sp) :: aspect     ! slope azimuth (north = 0) (degrees)
+  real(sp) :: cti        ! compound topographic index = log(upstream area / tan(local slope)) (index)
+  real(sp) :: hand       ! height above nearest drainage (m)
+  real(sp) :: elev_stdev ! standard deviation of elevation (m)
+  real(sp) :: thickness  ! soil and regolith thickness (m)
 end type terraintype
 
 ! ---
