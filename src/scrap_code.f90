@@ -1,6 +1,170 @@
 
 
 
+
+integer :: varid
+
+integer :: srtx
+integer :: cntx
+integer :: srty
+integer :: cnty
+
+real(sp), dimension(2) :: actual_range
+
+integer(i2) :: missing_value
+
+! -----
+
+srtx = gridinfo%srtx
+cntx = gridinfo%cntx
+srty = gridinfo%srty
+cnty = gridinfo%cnty
+
+ncstat = nf90_open(terrainfile,nf90_nowrite,ncid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_inq_varid(ncid,'elv',varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid,varid,terrain%elv,start=[srtx,srty],count=[cntx,cnty])
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_att(ncid,varid,'missing_value',missing_value)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+actual_range(1) = minval(terrain%elv,mask = terrain%elv /= missing_value)
+actual_range(2) = maxval(terrain%elv,mask = terrain%elv /= missing_value)
+
+write(stderr,*)'reading elevation',actual_range
+  
+ncstat = nf90_close(ncid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+
+
+
+
+
+
+
+
+
+
+! -----------------------------------------------------
+! read slope, elevation, st dev from NAtopo_v2024.nc
+
+subroutine readnewterrain(terrainfile, gridinfo, terrain)
+
+use netcdf
+use errormod,      only : ncstat, netcdf_err
+use typesmod,      only : gridinfotype, terraintype
+use parametersmod, only : sp, stderr, rmissing
+
+implicit none
+
+! arguments
+
+character(*),                      intent(in)    :: terrainfile
+type(gridinfotype),                intent(in)    :: gridinfo
+type(terraintype), dimension(:,:), intent(inout) :: terrain
+
+! local variables
+
+integer :: ncid
+integer :: varid
+
+integer :: srtx
+integer :: cntx
+integer :: srty
+integer :: cnty
+
+real(sp) :: missing_value
+real(sp), dimension(2) :: actual_range
+
+! -----
+
+srtx = gridinfo%srtx
+cntx = gridinfo%cntx
+srty = gridinfo%srty
+cnty = gridinfo%cnty
+
+write(stderr,*) 'Reading new terrain file:', trim(terrainfile)
+
+ncstat = nf90_open(terrainfile, nf90_nowrite, ncid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! --- Read slope ---
+ncstat = nf90_inq_varid(ncid, 'slope', varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid, varid, terrain%slope, start=[srtx,srty], count=[cntx,cnty])
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_att(ncid, varid, 'missing_value', missing_value)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+where (terrain%slope == missing_value) terrain%slope = rmissing
+
+actual_range(1) = minval(terrain%slope, mask = terrain%slope /= rmissing)
+actual_range(2) = maxval(terrain%slope, mask = terrain%slope /= rmissing)
+
+write(stderr,*) 'reading slope', actual_range
+
+! --- Read elevation standard deviation ---
+ncstat = nf90_inq_varid(ncid, 'elev_stdev', varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid, varid, terrain%elev_stdev, start=[srtx,srty], count=[cntx,cnty])
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_att(ncid, varid, 'missing_value', missing_value)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+where (terrain%elev_stdev == missing_value) terrain%elev_stdev = rmissing
+
+actual_range(1) = minval(terrain%elev_stdev, mask = terrain%elev_stdev /= rmissing)
+actual_range(2) = maxval(terrain%elev_stdev, mask = terrain%elev_stdev /= rmissing)
+
+write(stderr,*) 'reading elev_stdev', actual_range
+
+! --- Read slope standard deviation ---
+ncstat = nf90_inq_varid(ncid, 'slope_stdev', varid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_var(ncid, varid, terrain%slope_stdev, start=[srtx,srty], count=[cntx,cnty])
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_get_att(ncid, varid, 'missing_value', missing_value)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+where (terrain%slope_stdev == missing_value) terrain%slope_stdev = rmissing
+
+actual_range(1) = minval(terrain%slope_stdev, mask = terrain%slope_stdev /= rmissing)
+actual_range(2) = maxval(terrain%slope_stdev, mask = terrain%slope_stdev /= rmissing)
+
+write(stderr,*) 'reading slope_stdev', actual_range
+
+! --- Close file ---
+ncstat = nf90_close(ncid)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+write(stderr,*) 'Successfully read new terrain variables'
+
+end subroutine readnewterrain
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ! local variables
 
 real(sp) :: Tk     ! surface air temperature (K)

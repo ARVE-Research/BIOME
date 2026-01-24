@@ -16,8 +16,8 @@ implicit none
 
 ! arguments
 
-real(sp),                           intent(in) :: thickness
-type(soilcoordstype), dimension(:), intent(in) :: soilcoords
+real(sp),                           intent(in)    :: thickness
+type(soilcoordstype), dimension(:), intent(in)    :: soilcoords
 type(soiltype),       dimension(:), intent(inout) :: soil
 type(soilwatertype),                intent(out)   :: soilw
 

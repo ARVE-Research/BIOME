@@ -73,11 +73,11 @@ real(sp) :: ti1   ! midnight to sunrise
 
 ! -------------------------
 
-dayl0 = met0%dayl   ! current day daylength
+dayl0 = met0%dayl  ! current day daylength
 dayl1 = met1%dayl  ! next day daylength
-tmin0 = met0%tmin   ! temperature at sunrise of the current day
+tmin0 = met0%tmin  ! temperature at sunrise of the current day
 tmin1 = met1%tmin  ! temperature at sunrise of the next day
-tmax  = met0%tmax   ! daytime maximum temperature
+tmax  = met0%tmax  ! daytime maximum temperature
 
 ! to separate daytime and nighttime: (Leo Lai May 2019)
 ! define daylength of polar night to be 1 hour

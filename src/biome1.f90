@@ -5,7 +5,7 @@ use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
 use netcdfoutputmod
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,iminloc,replace
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace,aspectrad
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
@@ -75,7 +75,6 @@ integer :: ndy
 integer, dimension(nmos) :: ndm
 
 integer :: wm
-integer :: cm
 integer :: d
 
 integer(i8) :: memreq
@@ -193,11 +192,15 @@ do y = 1,cnty
 
     if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
     
+    ! coordinates
+    
     pixel(i)%x = x
     pixel(i)%y = y
     
     pixel(i)%lon = coords(x,y)%geolon
     pixel(i)%lat = coords(x,y)%geolat
+    
+    ! terrain variables
     
     pixel(i)%landf      = terrain(x,y)%landf
     pixel(i)%elv        = terrain(x,y)%elv
@@ -207,13 +210,15 @@ do y = 1,cnty
     pixel(i)%hand       = terrain(x,y)%hand
     pixel(i)%elev_stdev = terrain(x,y)%elev_stdev
     pixel(i)%thickness  = terrain(x,y)%thickness
-        
+    
+    pixel(i)%srad  = atan(pixel(i)%slope)        ! convert m m-1 to radians
+    pixel(i)%gamma = aspectrad(pixel(i)%aspect)  ! sets south = 0 and converts to radians
+
     ! mean temperature of the coldest month
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)
     pixel(i)%twm = maxval(climate(x,y,:)%tmp)
     pixel(i)%wm  = imaxloc(climate(x,y,:)%tmp)
-    pixel(i)%cm  = iminloc(climate(x,y,:)%tmp)
 
     ! precipitation equitability index, used in airmass calculations for surface radiation
     
@@ -484,9 +489,9 @@ do m = 1,nmos
       
       call insol(slon,orbit,latr,solar)
       
-      dmet0(i)%delta = solar%delta
-      dmet0(i)%rad0  = solar%rad0
-      dmet0(i)%dayl  = solar%dayl
+      dmet1(i)%delta = solar%delta
+      dmet1(i)%rad0  = solar%rad0
+      dmet1(i)%dayl  = solar%dayl
             
       ! calculate integrated day- and night-time temperature
       ! nighttime is goes into the next day, need to know tmin of the next day
@@ -675,10 +680,8 @@ do i = 1,ncells
   pixel(i)%aalpha = sum(mmet(i,:)%alpha) / 12.
   
   wm = pixel(i)%wm
-  cm = pixel(i)%cm
   
   pixel(i)%awm = mmet(i,wm)%alpha
-  pixel(i)%acm = mmet(i,cm)%alpha
 
   call calcbiome(pixel(i))
 
@@ -706,7 +709,6 @@ call writereal2d(ofid,gridinfo,pixel,'twm',pixel%twm)
 call writereal2d(ofid,gridinfo,pixel,'GDD0',pixel%gdd0)
 call writereal2d(ofid,gridinfo,pixel,'GDD5',pixel%gdd5)
 call writereal2d(ofid,gridinfo,pixel,'awm',pixel%awm)
-call writereal2d(ofid,gridinfo,pixel,'acm',pixel%acm)
 call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
 
 ! call writeterrain_real2d(ofid,gridinfo,'slope',pixel%slope)
