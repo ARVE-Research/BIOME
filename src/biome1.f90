@@ -5,7 +5,7 @@ use coordsmod
 use readdatamod
 use typesmod         ! going to use all of the types, but should specify
 use netcdfoutputmod
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace,aspectrad
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use calendarmod,     only : initcalendar
@@ -192,11 +192,15 @@ do y = 1,cnty
 
     if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
     
+    ! coordinates
+    
     pixel(i)%x = x
     pixel(i)%y = y
     
     pixel(i)%lon = coords(x,y)%geolon
     pixel(i)%lat = coords(x,y)%geolat
+    
+    ! terrain variables
     
     pixel(i)%landf      = terrain(x,y)%landf
     pixel(i)%elv        = terrain(x,y)%elv
@@ -206,7 +210,10 @@ do y = 1,cnty
     pixel(i)%hand       = terrain(x,y)%hand
     pixel(i)%elev_stdev = terrain(x,y)%elev_stdev
     pixel(i)%thickness  = terrain(x,y)%thickness
-        
+    
+    pixel(i)%srad  = atan(pixel(i)%slope)        ! convert m m-1 to radians
+    pixel(i)%gamma = aspectrad(pixel(i)%aspect)  ! sets south = 0 and converts to radians
+
     ! mean temperature of the coldest month
 
     pixel(i)%tcm = minval(climate(x,y,:)%tmp)

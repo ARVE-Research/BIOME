@@ -61,8 +61,8 @@ type pixeltype
   real(sp) :: elev_stdev ! standard deviation of elevation (m)
   real(sp) :: thickness  ! soil and regolith thickness (m)
 
-  real(sp) :: sloperad   ! median slope inclination (rad)
-  real(sp) :: aspectrad  ! median slope orientation (rad), 0 = S, values increasing clockwise
+  real(sp) :: srad       ! slope inclination (rad)
+  real(sp) :: gamma      ! slope orientation (rad), 0 = S, values increasing clockwise
 
   ! meteorological variables
   real(sp) :: P      ! mean atmospheric pressure (Pa)

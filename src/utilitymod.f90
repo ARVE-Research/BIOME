@@ -861,4 +861,28 @@ end function replace
 
 ! ---------------------------------------------------------
 
+real(sp) function aspectrad(aspectdeg)
+
+! convert aspect in degrees with north = 0 to aspect in radians with south = 0
+
+use parametersmod, only : sp,pir => pir_sp
+
+implicit none
+
+real(sp), intent(in) :: aspectdeg
+
+if (aspectdeg >= 180.) then
+
+  aspectrad = pir * (aspectdeg - 180.)
+
+else
+
+  aspectrad = pir * (aspectdeg + 180.)
+
+end if
+
+end function aspectrad
+
+! ---------------------------------------------------------
+
 end module utilitymod
