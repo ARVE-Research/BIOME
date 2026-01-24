@@ -59,6 +59,8 @@ type(pixeltype), intent(inout) :: pixel
 real(sp) :: alpha
 real(sp) :: tcm
 real(sp) :: twm
+real(sp) :: awm
+real(sp) :: acm
 real(sp) :: GDD
 real(sp) :: GDD0
 integer  :: biome
@@ -72,6 +74,8 @@ alpha = pixel%aalpha
 
 tcm = pixel%tcm
 twm = pixel%twm
+awm = pixel%awm
+acm = pixel%acm
  
 GDD = pixel%gdd5
 
@@ -91,6 +95,14 @@ if (tcm >= 15.5) then
   end if
 end if
 
+! plant type: 3) warm-temperate evergreen
+! 0.65-->.33
+! Exclude Mediterranean climates with very wet winters
+if (tcm >= 5) then
+  if (alpha >= 0.33 .and. awm >= 0.008) then
+    planttype(3) = .true.
+  end if
+end if
 
 !Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
 
@@ -125,7 +137,7 @@ if (tcm >= -35 .and. tcm <= -2) then
 end if 
 
 ! plant type: 7) boreal summergreen
-! 0.65-->.33
+! 0.65-->.21
 if (tcm <= 5) then 
   if (GDD >= 350) then
   if (alpha >= 0.33) then
@@ -135,7 +147,7 @@ if (tcm <= 5) then
 end if
 
 ! plant type: 8) sclerophyll/succulent
-!0.28-->.14
+!0.28-->.09 ??????????????????????????????????????
 if (tcm >= 5) then
   if (alpha >= 0.14) then
   planttype(8) = .true.
@@ -143,25 +155,25 @@ if (tcm >= 5) then
 end if
 
 ! plant type: 9) warm grass/shrub
-! 0.18-->.09
+! 0.18-->.06
 if (twm >= 22) then
-  if (alpha >= 0.09) then
+  if (alpha >= 0.06) then
   planttype(9) = .true.
   end if
 end if
 
 ! plant type: 10) cool grass/shrub
-! 0.33-->.17
+! 0.33-->.11
 if (GDD >= 500) then
-  if (alpha >= 0.17) then
+  if (alpha >= 0.11) then
   planttype(10) = .true.
   end if
 end if
 
 ! plant type: 11) cold grass/shrub
-! 0.33-->.17
+! 0.33-->.11
 if (GDD0 >= 100) then
-  if (alpha >= 0.17) then
+  if (alpha >= 0.11) then
   planttype(11) = .true. 
   end if
 end if

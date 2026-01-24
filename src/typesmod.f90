@@ -75,13 +75,15 @@ type pixeltype
   real(sp) :: gdd5   ! growing degree days on a 5-degree base (degC)
   real(sp) :: gdd0   ! growing degree days on a 0-degree base (degC)
   real(sp) :: awm    ! alpha of the warmest month (fraction)
+  real(sp) :: acm    ! alpha of the coldest month (fraction)
   real(sp) :: aalpha ! mean annual alpha (fraction)
   real(sp) :: Nmelt  ! depletion curve shape parameter
 
   real(sp), dimension(40) :: dprec
 
   ! other
-  integer :: wm
+  integer :: wm    ! warmest month index
+  integer :: cm    ! coldest month index
   integer(i2) :: biome
   
 end type pixeltype

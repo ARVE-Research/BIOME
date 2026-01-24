@@ -491,6 +491,24 @@ ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
+! alpha of the coldest month
+
+ncstat = nf90_def_var(ofid,'acm',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','ratio of AET to PET in the coldest month')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','fraction')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
 ! annual mean alpha
 
 ncstat = nf90_def_var(ofid,'aalpha',nf90_float,dimids(1:2),varid,chunksizes=chunks(1:2),deflate_level=1,shuffle=.false.)
