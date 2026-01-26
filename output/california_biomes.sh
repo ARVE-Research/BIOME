@@ -56,7 +56,12 @@ gmt psxy $rivers -R -J -Wthin,slategray1 -O -P -K >> $output
 
 gmt psxy $lakes -R -J -Gslategray1 -O -P -K >> $output
 
-gmt psbasemap -R -J -Ba2 -O -P >> $output
+gmt psbasemap -R -J -Ba2 -O -P -K >> $output
+
+# legend
+gmt gmtset FONT_ANNOT_PRIMARY 6p,Helvetica,black
+sed "s/TITLE/$title/g" biome17.legend | gmt pslegend -Dx0.2i/0.2i+jBL+l1.5+w2.5i -F+pthinnest,black+gwhite -O -P >> $output
+
 
 # Convert to PDF
 gmt psconvert -A -Tf -Z $output
