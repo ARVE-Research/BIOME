@@ -1,28 +1,30 @@
 program biome1
 
-use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,dmetfile_unit !,present_mon_noleap
+use airmassmod,      only : initairmass,elev_corr,Pjj
+use calcbiomemod,    only : calcbiome
+use calendarmod,     only : initcalendar
 use coordsmod
-use readdatamod
-use typesmod         ! going to use all of the types, but should specify
+use diurnaltempmod,  only : diurnaltemp
+use insolationmod,   only : truelon,insol
 use netcdfoutputmod
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace,aspectrad
 use newsplinemod
 use orbitmod,        only : getorbitpars
-use calendarmod,     only : initcalendar
-use randomdistmod,   only : ran_seed
-use weathergenmod,   only : calcdprec,weathergen
-use calendarmod
-use insolationmod,   only : truelon,insol
-use diurnaltempmod,  only : diurnaltemp
+use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,dmetfile_unit !,present_mon_noleap
+use pedotransfermod, only : soilproperties
 use physicsmod,      only : stdP
-use airmassmod,      only : initairmass,elev_corr,Pjj
 use radiationmod,    only : radpet
-use soilwatermod,    only : calcwhc,soilwater
+use randomdistmod,   only : ran_seed
+use readdatamod
 use snowmod,         only : Tt,snow
-use calcbiomemod,    only : calcbiome
+use soilwatermod,    only : calcwhc,soilwater
 use tsoutputmod,     only : writedailymetvars
+use typesmod         ! going to use all of the types, but should specify
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace,aspectrad
+use weathergenmod,   only : calcdprec,weathergen
 
 implicit none
+
+integer, parameter :: nl = 6  ! number of soil layers
 
 character(200) :: jobfile
 character(200) :: terrainfile
@@ -49,7 +51,8 @@ type(metvars_daily),   allocatable, dimension(:)     :: dmet0       ! current da
 type(metvars_daily),   allocatable, dimension(:)     :: dmet1       ! next day meteorology
 type(metvars_monthly), allocatable, dimension(:,:)   :: mmet        ! monthly summary meteorology: valid gridcells x 12 months
 type(monclimatetype),  allocatable, dimension(:,:,:) :: climate     ! input monthly climate data, rectangular grid
-type(soiltype),        allocatable, dimension(:,:,:) :: soil        ! soil physical properties, rectangular grid x layers
+type(soilinputtype),   allocatable, dimension(:,:,:) :: soilinput   ! soil physical properties, rectangular grid x layers
+type(soilstatetype),   allocatable, dimension(:,:)   :: soilstate   ! soil state variables per valid pixel (index,layer)
 
 real(sp), allocatable, dimension(:) :: tmin
 real(sp), allocatable, dimension(:) :: tmax
@@ -62,6 +65,7 @@ integer :: x
 integer :: y
 integer :: m
 integer :: i
+integer :: l
 
 integer :: doy
 integer :: d1
@@ -78,7 +82,7 @@ integer :: wm
 integer :: d
 
 integer(i8) :: memreq
-integer(i8) :: maxmem = 20000_i8  ! default amount of memory allowed for input data
+integer(i8) :: maxmem = 20000_i8  ! default amount of memory allowed for input data (MB)
 
 integer :: yrbp
 
@@ -133,8 +137,8 @@ write(0,*)'allocate rectangular arrays',cntx,cnty
 allocate(coords(cntx,cnty))
 allocate(terrain(cntx,cnty))
 allocate(climate(cntx,cnty,nmos))
-allocate(soilcoords(6))
-allocate(soil(cntx,cnty,6))
+allocate(soilcoords(nl))
+allocate(soilinput(cntx,cnty,nl))
 
 ! ---------------------------------
 ! read the input data (coordinate variables, terrain, and land fraction)
@@ -147,7 +151,7 @@ call readterrain(terrainfile,gridinfo,terrain)
 
 call readclimate(climatefile,gridinfo,climate)
 
-call readsoil(soilfile,gridinfo,terrain,soilcoords,soil)
+call readsoil(soilfile,gridinfo,terrain,soilcoords,soilinput)
 
 ! ---------------------------------
 ! generate the output file
@@ -161,11 +165,12 @@ call genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 ! ---------------------------------
 ! check for valid pixels
 
-ncells = count(soil(:,:,1)%whc /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing .and. terrain(:,:)%thickness > 0.)
+ncells = count(soilinput(:,:,1)%sand /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing .and. terrain(:,:)%thickness > 0.)
 
 write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
 allocate(pixel(ncells))
+allocate(soilstate(ncells,nl))
 
 allocate(mmet(ncells,12))  ! monthly output
 
@@ -190,7 +195,7 @@ i = 1
 do y = 1,cnty
   do x = 1,cntx
 
-    if (soil(x,y,1)%whc == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
+    if (soilinput(x,y,1)%sand == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
     
     ! coordinates
     
@@ -231,11 +236,18 @@ do y = 1,cnty
     pixel(i)%Ratm = elev_corr(pixel(i)%elv)
     pixel(i)%P    = stdP(pixel(i)%elv)
     
+    ! calculate soil physical properties based on inputs
+    
+    call soilproperties(terrain(x,y),soilcoords,soilinput(x,y,:),soilstate(i,:))
+    
     i = i + 1
 
   end do
 end do
 
+! clean up the no longer needed rectangular data input structures
+
+deallocate(soilinput)
 deallocate(terrain)
 
 ! at this point should make a quick check for total memory requirement and take appropriate action if the amount is too large
@@ -283,8 +295,8 @@ do i = 1,ncells
   
   ! calculate the column-integrated soil water holding capacity
   
-  call calcwhc(pixel(i)%thickness,soilcoords,soil(x,y,:),soilw(i))
-  
+  call calcwhc(pixel(i)%thickness,soilcoords,soilstate(i,:),soilw(i))
+    
   ! calculate the snow probability temperature Tt
   
   pixel(i)%Tt = Tt(pixel(i)%elv,pixel(i)%lat)

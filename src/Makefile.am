@@ -8,6 +8,7 @@ biome1_SOURCES =       \
   randomdistmod.f90    \
   typesmod.f90         \
   coordsmod.f90        \
+  pedotransfermod.f90  \
   readdatamod.f90      \
   tsoutputmod.f90      \
   netcdfoutputmod.f90  \

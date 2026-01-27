@@ -6,10 +6,10 @@ contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine calcwhc(thickness,soilcoords,soil,soilw)
+subroutine calcwhc(thickness,soilcoords,soilstate,soilw)
 
 use parametersmod, only : sp
-use typesmod,      only : soilcoordstype,soiltype,soilwatertype,terraintype
+use typesmod,      only : soilcoordstype,soilstatetype,soilwatertype,terraintype
 use utilitymod,    only : pos
 
 implicit none
@@ -18,7 +18,7 @@ implicit none
 
 real(sp),                           intent(in)    :: thickness
 type(soilcoordstype), dimension(:), intent(in)    :: soilcoords
-type(soiltype),       dimension(:), intent(inout) :: soil
+type(soilstatetype),  dimension(:), intent(inout) :: soilstate
 type(soilwatertype),                intent(out)   :: soilw
 
 ! local variables
@@ -36,30 +36,28 @@ real(sp) :: excess
 
 nl = size(soilcoords)
 
-soil%dz = soilcoords%dz
-
 depthT = thickness * 100.  ! convert m to cm
 
-lb = soilcoords%bnds(2)
+lb = soilcoords%layer_bnds(2)
 
 ! find layer boundary closest to total soil depth
 
-lbot = pos(soilcoords%bnds(2),depthT)
+lbot = pos(soilcoords%layer_bnds(2),depthT)
 
 if (depthT < maxval(lb) .and. lb(lbot) < depthT) lbot = lbot + 1
 
 ! zero out thickness below soil depth (for later: prescribe this to bedrock properties)
 
-if (lbot < nl) soil(lbot+1:)%dz = 0.  
-
-if (depthT < lb(lbot)) then
-  excess = depthT - sum(soilcoords(1:lbot-1)%dz)
-  soil(lbot)%dz = excess
-end if
+! if (lbot < nl) soil(lbot+1:)%dz = 0.  
+! 
+! if (depthT < lb(lbot)) then
+!   excess = depthT - sum(soilcoords(1:lbot-1)%dz)
+!   soil(lbot)%dz = excess
+! end if
 
 ! calculate the column-integrated soil water holding capacity
 
-soilw%whc = sum(soil%whc * 10. * soil%dz)  ! need to convert cm to mm
+soilw%whc = sum(soilstate%whc * 10. * soilcoords%dz)  ! need to convert cm to mm
 
 ! diagnostic output
 ! if (depthT < 200.) then

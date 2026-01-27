@@ -2,17 +2,18 @@ module typesmod
 
 ! repository of derived types
 
-use parametersmod, only : i2,sp,dp,nmos
+use parametersmod, only : i1,i2,sp,dp,nmos
 use randomdistmod, only : randomstate
 
 implicit none
+
+! list of the data structures in this module
 
 public :: gridinfotype
 public :: coordstype
 public :: terraintype
 public :: monclimatetype
 public :: dayclimatetype
-public :: soiltype
 public :: metvars_in
 public :: metvars_daily
 
@@ -51,11 +52,11 @@ type pixeltype
   real(sp) :: phi    ! latitude (rad)
   ! integer, dimension(8) :: neighbors
 
-  ! terrain characteristics
+  ! terrain characteristics (these have only one value per gridcell)
   real(sp) :: landf      ! part of gridcell that is ice-free land (fraction)
   real(sp) :: elv        ! elevation above sea level (m)
   real(sp) :: slope      ! terrain slope (m m-1)
-  real(sp) :: aspect     ! slope azimuth (north = 0) (degrees)
+  real(sp) :: aspect     ! slope orientation (azimuth; north = 0) (degrees)
   real(sp) :: cti        ! compound topographic index = log(upstream area / tan(local slope)) (index)
   real(sp) :: hand       ! height above nearest drainage (m)
   real(sp) :: elev_stdev ! standard deviation of elevation (m)
@@ -90,19 +91,6 @@ end type pixeltype
 
 ! ---
 
-type terraintype
-  real(sp) :: landf      ! part of gridcell that is ice-free land (fraction)
-  real(sp) :: elv        ! elevation above sea level (m)
-  real(sp) :: slope      ! terrain slope (m m-1)
-  real(sp) :: aspect     ! slope azimuth (north = 0) (degrees)
-  real(sp) :: cti        ! compound topographic index = log(upstream area / tan(local slope)) (index)
-  real(sp) :: hand       ! height above nearest drainage (m)
-  real(sp) :: elev_stdev ! standard deviation of elevation (m)
-  real(sp) :: thickness  ! soil and regolith thickness (m)
-end type terraintype
-
-! ---
-
 type monclimatetype
   real(sp) :: tmp
   real(sp) :: dtr
@@ -122,21 +110,63 @@ type dayclimatetype
 end type dayclimatetype
 
 ! ---
+! terrain and soil input variables, one level per pixel allocated on rectangular grid (x,y)
 
-type soilcoordstype
-  real(sp) :: zpos
-  real(sp) :: dz
-  real(sp), dimension(2) :: bnds
-end type soilcoordstype
-
-type soiltype
-  real(sp) :: dz     ! actual layer thickness (cm)
-  real(sp) :: Tsat
-  real(sp) :: Ksat
-  real(sp) :: whc
-end type soiltype
+type terraintype
+  real(sp)    :: landf      ! part of gridcell that is ice-free land (fraction)
+  real(sp)    :: elv        ! elevation above sea level (m)
+  real(sp)    :: slope      ! terrain slope (m m-1)
+  real(sp)    :: aspect     ! slope azimuth (north = 0) (degrees)
+  real(sp)    :: cti        ! compound topographic index = log(upstream area / tan(local slope)) (index)
+  real(sp)    :: hand       ! height above nearest drainage (m)
+  real(sp)    :: elev_stdev ! standard deviation of elevation (m)
+  real(sp)    :: thickness  ! soil and regolith thickness (m)
+  integer(i1) :: WRB        ! World Reference Base soil code (category)
+  integer(i1) :: USDA       ! USDA soil code (category)
+  integer(i1) :: lithology  ! lithology code (not used) (category)
+end type terraintype
 
 ! ---
+! soil input and state variables
+
+! 1D input variables, same for all locations (layer)
+
+type soilcoordstype
+  real(sp) :: zpos                      ! depth to layer midpoint, down positive (cm)
+  real(sp) :: dz                        ! soil layer thickness (cm)
+  real(sp), dimension(2) :: layer_bnds  ! depth of layer boundaries (cm)
+end type soilcoordstype
+
+! 3D input variables, allocated on rectangular (3D) grid (x,y,layer)
+
+type soilinputtype
+  real(sp) :: sand  ! sand content by mass (fraction)
+  real(sp) :: clay  ! clay content by mass (fraction)
+  real(sp) :: cfvo  ! coarse fragments by volume (fraction)
+  real(sp) :: soc   ! soil organic carbon content by mass (fraction)
+end type soilinputtype
+
+! state variables, allocated per valid pixel (index, layer)
+
+type soilstatetype
+  real(sp) :: bulk   ! bulk density (g cm-3)
+  real(sp) :: Tsat   ! soil porosity (fraction)
+  real(sp) :: T33    ! soil water content at field capacity (-33 kPa) (mm cm-1)
+  real(sp) :: T1500  ! soil water content at wilting point (-1500 kPa) (mm cm-1)
+  real(sp) :: whc    ! water holding capacity defined as T33 - T1500, reduced for coarse fragments (mm cm-1)
+  real(sp) :: Ksat   ! saturated hydraulic conductivity (mm h-1)
+  real(sp) :: lambda ! pore size distribution (unitless)
+  real(sp) :: psi_e  ! soil water potential at air entry (mm)
+  real(sp) :: w      ! instantaneous soil water content (mm cm-1)
+  real(sp) :: theta  ! volumetric water content (fraction)
+  real(sp) :: psi    ! soil matric potential (?)
+  real(sp) :: tksoil ! thermal conductivity of soil solids (W m-1 K-1)
+  real(sp) :: tksdry ! thermal conductivity of dry natural soil (W m-1 K-1)
+  real(sp) :: cpsoil ! heat capacity of soil solids (J m-2 K-1)
+end type soilstatetype
+
+! ---
+! to be removed
 
 type soilwatertype
   real(sp) :: whc    ! column-integrated water holding capacity (mm)
