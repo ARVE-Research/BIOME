@@ -7,10 +7,6 @@ use coordsmod
 use diurnaltempmod,  only : diurnaltemp
 use insolationmod,   only : truelon,insol
 use netcdfoutputmod
-<<<<<<< HEAD
-=======
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,iminloc,replace,aspectrad
->>>>>>> cc0d15a2f6e0f3cf7d710d4479ce895ebf3a4c08
 use newsplinemod
 use orbitmod,        only : getorbitpars
 use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,dmetfile_unit !,present_mon_noleap
@@ -23,7 +19,7 @@ use snowmod,         only : Tt,snow
 use soilwatermod,    only : calcwhc,soilwater
 use tsoutputmod,     only : writedailymetvars
 use typesmod         ! going to use all of the types, but should specify
-use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,replace,aspectrad
+use utilitymod,      only : bp2ce,leapyear,overprint,imaxloc,iminloc,replace,aspectrad
 use weathergenmod,   only : calcdprec,weathergen
 
 implicit none
