@@ -97,9 +97,10 @@ end if
 
 ! plant type: 3) warm-temperate evergreen
 ! 0.65-->.33
-! Exclude Mediterranean climates with very wet winters
+! Include climates with very wet winters and dry summers
 if (tcm >= 5) then
-  if (alpha >= 0.33 .and. awm >= 0.008) then
+!   if (alpha >= 0.33 .and. awm >= 0.008) then
+  if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
     planttype(3) = .true.
   end if
 end if
