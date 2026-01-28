@@ -274,6 +274,60 @@ ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
+! monthly mean total surface shortwave radiation
+
+ncstat = nf90_def_var(ofid,'swrad',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','total surface downwelling shortwave radiation')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','W m-2')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly mean net longwave radiation (Josey method)
+
+ncstat = nf90_def_var(ofid,'lw_rad',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','net longwave radiation (Josey method)')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','W m-2')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly mean net longwave radiation (Sandoval method)
+
+ncstat = nf90_def_var(ofid,'lw_rad2',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','net longwave radiation (Sandoval method)')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','W m-2')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
 ! monthly PET
 
 ncstat = nf90_def_var(ofid,'mpet',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)

@@ -65,7 +65,10 @@ real(sp) :: rad0    ! daily mean top-of-the-atmosphere insolation (W m-2)
 real(sp) :: dayl    ! day length (h)
 
 real(sp) :: sw_rad  ! total surface downwelling shortwave (W m-2)
-real(sp) :: lw_rad  ! net longwave (kJ m-2 d-1)
+real(sp) :: lw_rad  ! net longwave from surf_lw2 (Sandoval)(kJ m-2 d-1)
+real(sp) :: lw_rad2 ! net longwave from surf_lw (Josey)(W m-2)
+real(sp) :: lw_down ! downwelling longwave (W m-2)
+real(sp) :: lw_up   ! upwelling longwave (W m-2)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
 real(sp) :: pet0    ! previous value for PET (mm d-1)
@@ -165,6 +168,8 @@ do
   sunf = sf(elv,rad0,sw_rad)
 
   call surf_lw2(sunf,tday,lw_rad)
+  
+  lw_rad = -lw_rad
 
 !   write(0,'(i5,f8.2,2f8.3,4f8.2)')i,toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad
   
@@ -206,10 +211,21 @@ do
 
 end do
 
+! ----
+! calculate dewpoint temperature and use it to get the alternative longwave estimate from surf_lw (Josey)
+
+tdew = dewpoint(tmin,tmax,dpet,Pann)
+call surf_lw(tday,tdew,cldf,lw_rad2)
+
+
 dmet%rdirect  = direct
 dmet%rdiffuse = diffuse
 dmet%dpet     = dpet
 dmet%HNpos    = HNpos
+! radiation outputs for diagnostics
+dmet%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
+dmet%lw_rad  = lw_rad   ! net longwave from surf_lw2 / (Sandoval)(W m-2)
+dmet%lw_rad2 = lw_rad2  ! net longwave from surf_lw / (Josey) (W m-2)
 
 ! night timestep
 

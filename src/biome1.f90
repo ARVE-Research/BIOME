@@ -558,6 +558,9 @@ mmet%mpet  = 0.
 mmet%alpha = 0.
 mmet%direct  = 0.
 mmet%diffuse = 0.
+mmet%swrad   = 0.
+mmet%lw_rad  = 0.
+mmet%lw_rad2 = 0.
 mmet%swe  = 0.
 mmet%snow  = 0.
 mmet%melt  = 0.
@@ -653,6 +656,10 @@ do m = 1,nmos
 
       mmet(i,m)%direct  = mmet(i,m)%direct  + dmet0(i)%rdirect  / real(ndm(m))
       mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet0(i)%rdiffuse / real(ndm(m))
+      mmet(i,m)%swrad   = mmet(i,m)%swrad   + dmet0(i)%swrad   / real(ndm(m))
+      mmet(i,m)%lw_rad  = mmet(i,m)%lw_rad  + dmet0(i)%lw_rad  / real(ndm(m))
+      mmet(i,m)%lw_rad2 = mmet(i,m)%lw_rad2 + dmet0(i)%lw_rad2 / real(ndm(m))
+
 
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet0(i)%dpet
       mmet(i,m)%alpha = mmet(i,m)%alpha + dmet0(i)%alpha / real(ndm(m))
@@ -710,6 +717,9 @@ write(0,*)'writing'
 
 call writereal3d(ofid,gridinfo,pixel,'rdirect',mmet%direct)
 call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
+call writereal3d(ofid,gridinfo,pixel,'swrad',mmet%swrad)
+call writereal3d(ofid,gridinfo,pixel,'lw_rad',mmet%lw_rad)
+call writereal3d(ofid,gridinfo,pixel,'lw_rad2',mmet%lw_rad2)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
@@ -718,7 +728,6 @@ call writereal3d(ofid,gridinfo,pixel,'snow', mmet%snow)
 call writereal3d(ofid,gridinfo,pixel,'melt', mmet%melt)
 call writereal3d(ofid,gridinfo,pixel,'fsnow',mmet%fsnow)
 call writereal3d(ofid,gridinfo,pixel,'Bsw',  mmet%Bsw)
-
 
 call writereal2d(ofid,gridinfo,pixel,'tcm',pixel%tcm)
 call writereal2d(ofid,gridinfo,pixel,'twm',pixel%twm)
