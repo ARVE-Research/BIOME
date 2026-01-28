@@ -108,20 +108,20 @@ end if
 !Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
 
 ! plant type: 4) temperate summergreen
-! 0.65-->.33
+! 0.65-->.33-->.25
 if (tcm >= -15 .and. tcm <=15.5) then
   if (GDD >= 1200) then
-  if (alpha >= 0.33) then
+  if (alpha >= 0.25) then
     planttype(4) = .true.
   end if
   end if
 end if
 
 ! plant type: 5) cool-temp conifer
-! 0.65-->.33
+! 0.65-->.33-->.25
 if (tcm >= -19 .and. tcm <= 5) then
   if (GDD >= 900) then
-  if (alpha >= 0.33) then
+  if (alpha >= 0.25) then
     planttype(5) = .true.
   end if
   end if
@@ -138,10 +138,10 @@ if (tcm >= -35 .and. tcm <= -2) then
 end if 
 
 ! plant type: 7) boreal summergreen
-! 0.65-->.21
+! 0.65-->.33-->.25
 if (tcm <= 5) then 
   if (GDD >= 350) then
-  if (alpha >= 0.33) then
+  if (alpha >= 0.25) then
   planttype(7) = .true.
   end if
   end if
