@@ -163,10 +163,13 @@ do
 
   rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
-  ! longwave flux
+! longwave flux - using Josey method
+! 
+!   tdew = dewpoint(tmin,tmax,dpet,Pann)
+!   call surf_lw(tday,tdew,cldf,lw_rad)
 
+! longwave flux -- Sandoval method
   sunf = sf(elv,rad0,sw_rad)
-
   call surf_lw2(sunf,tday,lw_rad)
   
   lw_rad = -lw_rad
@@ -211,12 +214,9 @@ do
 
 end do
 
-! ----
-! calculate dewpoint temperature and use it to get the alternative longwave estimate from surf_lw (Josey)
-
-tdew = dewpoint(tmin,tmax,dpet,Pann)
-call surf_lw(tday,tdew,cldf,lw_rad2)
-
+! ! also calculate josey method for comparison output
+!   tdew = dewpoint(tmin,tmax,dpet,Pann)
+!   call surf_lw(tday,tdew,cldf,lw_rad)
 
 dmet%rdirect  = direct
 dmet%rdiffuse = diffuse
@@ -224,8 +224,9 @@ dmet%dpet     = dpet
 dmet%HNpos    = HNpos
 ! radiation outputs for diagnostics
 dmet%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
-dmet%lw_rad  = lw_rad   ! net longwave from surf_lw2 / (Sandoval)(W m-2)
-dmet%lw_rad2 = lw_rad2  ! net longwave from surf_lw / (Josey) (W m-2)
+dmet%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
+!dmet%lw_rad2 = lw_rad2   ! net longwave from surf_lw / Josey (W m-2) - for comparison
+
 
 ! night timestep
 

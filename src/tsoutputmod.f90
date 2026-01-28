@@ -34,9 +34,8 @@ type(metvars_daily), intent(in) :: dmet
     dmet%relsat, &   ! 16 - relative saturation w/whc (0-1)
     dmet%dpet,   &   ! 17 - daily PET (mm)
     dmet%swrad,  &   ! 18 - total surface shortwave radiation (W m-2)
-    dmet%lw_rad, &   ! 19 - net longwave, Sandoval method (W m-2)
-    dmet%lw_rad2     ! 20 - net longwave, Josey dewpoint method (W m-2)
-    
+    dmet%lw_rad      ! 19 - net longwave, Sandoval method (W m-2)
+    !dmet%lw_rad2     ! 20 - net longwave, Josey method (W m-2)
 
 end subroutine writedailymetvars
 

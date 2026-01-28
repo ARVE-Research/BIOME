@@ -99,8 +99,8 @@ end if
 ! 0.65-->.33
 ! Include climates with very wet winters and dry summers
 if (tcm >= 5) then
-!   if (alpha >= 0.33 .and. awm >= 0.008) then
-  if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
+   if (alpha >= 0.33 .and. acm >= 0.6) then
+!   if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
     planttype(3) = .true.
   end if
 end if
@@ -148,9 +148,9 @@ if (tcm <= 5) then
 end if
 
 ! plant type: 8) sclerophyll/succulent
-!0.28-->.09 ??????????????????????????????????????
+!0.28-->.14-->.09 ??????????????????????????????????????
 if (tcm >= 5) then
-  if (alpha >= 0.14) then
+  if (alpha >= 0.09) then
   planttype(8) = .true.
   end if
 end if
@@ -164,17 +164,17 @@ if (twm >= 22) then
 end if
 
 ! plant type: 10) cool grass/shrub
-! 0.33-->.11
+! 0.33-->.11-->.08
 if (GDD >= 500) then
-  if (alpha >= 0.11) then
+  if (alpha >= 0.08) then
   planttype(10) = .true.
   end if
 end if
 
 ! plant type: 11) cold grass/shrub
-! 0.33-->.11
+! 0.33-->.11-->.08
 if (GDD0 >= 100) then
-  if (alpha >= 0.11) then
+  if (alpha >= 0.08) then
   planttype(11) = .true. 
   end if
 end if

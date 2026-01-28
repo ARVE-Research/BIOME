@@ -272,7 +272,7 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: lwday     ! downwelling longwave radiation, daytime mean (W m-2)
   real(sp) :: lwnight   ! downwelling longwave radiation, nighttime mean (W m-2)
   real(sp) :: lw_rad    ! net longwave from surf_lw2 / (Sandoval Method) (W m-2)
-  real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey Method)(W m-2)
+  !real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey Method)(W m-2)
   real(sp) :: lw_net    ! net longwave radiation (W m-2)
   real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
@@ -321,7 +321,7 @@ type metvars_monthly
   real(sp) :: diffuse
   real(sp) :: swrad     ! total surface downwelling shortwave (W m-2)
   real(sp) :: lw_rad    ! net longwave from surf_lw2 / (Sandoval) (W m-2)
-  real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey) (W m-2)
+  !real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey) (W m-2)
   real(sp) :: lw_net   ! net longwave radiation (W m-2)
 
 

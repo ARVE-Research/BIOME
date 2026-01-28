@@ -58,16 +58,12 @@ echo "PET max: $pet_max mm"
 
 gmt psbasemap -R$t0/$t1/$lw_min/$lw_max -JX19/7 -Bpxa1O -Bpya20f10+l"Net LW (W m@+-2@+)" -BWSen+t"Net Longwave Radiation - ${place} (${lon}, ${lat})" -X4 -Y26 -P -K > $output
 
-# lw_rad line - Sandoval/SPLASH 2.0 method (column 19)
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$19}' $infile | gmt psxy -R -J -Wthick,dodgerblue -O -P -K >> $output
-
-# lw_rad2 line - Josey/Kimball dewpoint method (column 20)
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$20}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
+# lw_rad2 line - Sandoval/SPLASH 2.0 method (column 20)
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$19}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
 
 # legend
 gmt pslegend -R -J -DjTR+w5c+o0.2c -F+p0.5p+gwhite -O -P -K << EOF >> $output
-S 0.2c - 0.5c - thick,dodgerblue 0.6c LW Sandoval (SPLASH 2.0)
-S 0.2c - 0.5c - thick,firebrick 0.6c LW Josey (dewpoint)
+S 0.2c - 0.5c - thick,firebrick 0.6c LW Sandoval (SPLASH 2.0)
 EOF
 
 # ---
