@@ -73,6 +73,7 @@ real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
 real(sp) :: pet0    ! previous value for PET (mm d-1)
 real(sp) :: dpet    ! day potential evapotranspiraton (mm)
+real(sp) :: aet     ! actual evapotranspiration of the previous day (mm)
 
 real(sp) :: tmin
 real(sp) :: tmax
@@ -112,7 +113,8 @@ tmin = dmet%tmin
 tmax = dmet%tmax
 tday = dmet%tday
 cldf = dmet%cldf
-prec = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night
+prec = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
+aet  = dmet%aet
 
 lat    = pixel%lat
 elv    = pixel%elv
@@ -146,22 +148,25 @@ toa_sw = rad0 ! * dayl * 3.6
 
 call airmass(lat,delta/pir,dayl,Ratm,air)
 
-! iterate to estimate dewpoint, shortwave and longwave radiation, net radiation, and potential evapotranspiration
+! Note: in the Yin (1997,1998) formulation for downwelling shortwave, radiation depends on PET, 
+! presumably because evapotranspiration leads to atmospheric haze, which reduces surface radiation.
+! This presents a problem in very dry environments with high PET but low soil moisture, so AET is
+! relatively low. We solve this here by using the previous day's AET in place of the original PET
+
+! estimate dewpoint, shortwave and longwave radiation, net radiation, and potential evapotranspiration
 
 ! day timestep
 
-i = 1
+! i = 1
 
 pet0 = 0.
 dpet = pet0
 
-do
+! shortwave flux
 
-  ! shortwave flux
-  
-  call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,dpet,direct,diffuse,sw_rad)
+call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,aet,direct,diffuse,sw_rad)
 
-  rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
 ! longwave flux - using Josey method
 ! 
@@ -169,50 +174,43 @@ do
 !   call surf_lw(tday,tdew,cldf,lw_rad)
 
 ! longwave flux -- Sandoval method
-  sunf = sf(elv,rad0,sw_rad)
-  call surf_lw2(sunf,tday,lw_rad)
-  
-  lw_rad = -lw_rad
+sunf = sf(elv,rad0,sw_rad)
+call surf_lw2(sunf,tday,lw_rad)
 
-!   write(0,'(i5,f8.2,2f8.3,4f8.2)')i,toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad
-  
-  lwterm = (lw_rad - rw * ru) / (rw * rv)
-  
-  if (lwterm <= -1.) then
-    hn = pi
-  else if (lwterm >= 1.) then
-    hn = 0
-  else
-    hn = acos(lwterm)
-  end if
-  
-  ! daily net fluxes
-  
-  HNpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
-  
-  HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
-  
-  ! Isw = sw_rad * (1. - albedo)
+lw_rad = -lw_rad
 
-  ! netrad = Isw - lw_rad
-  
-  call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
- 
-  ! call surf_lw(tday,tdew,cldf,lw_rad)
-  
-  ! call netrad_pet(sw_rad,lw_rad,albedo,P,tday,netrad,dpet)
-  
-  ! write(0,*)i,hs,cldf,sunf,tday,rad0,direct,diffuse,sw_rad,lw_rad,Hnpos,Hnneg,dpet
+lwterm = (lw_rad - rw * ru) / (rw * rv)
 
-  ! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
+if (lwterm <= -1.) then
+  hn = pi
+else if (lwterm >= 1.) then
+  hn = 0
+else
+  hn = acos(lwterm)
+end if
 
-  if (abs(dpet - pet0) < 0.01 .or. i > 100) exit
+! daily net fluxes
 
-  pet0 = dpet
+HNpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
 
-  i = i + 1
+HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
 
-end do
+! Isw = sw_rad * (1. - albedo)
+
+! netrad = Isw - lw_rad
+
+call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
+
+! write(0,'(f8.2,2f8.3,6f8.2)')toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad,dpet,aet
+
+! call surf_lw(tday,tdew,cldf,lw_rad)
+
+! call netrad_pet(sw_rad,lw_rad,albedo,P,tday,netrad,dpet)
+
+! write(0,*)i,hs,cldf,sunf,tday,rad0,direct,diffuse,sw_rad,lw_rad,Hnpos,Hnneg,dpet
+
+! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
+
 
 ! ! also calculate josey method for comparison output
 !   tdew = dewpoint(tmin,tmax,dpet,Pann)

@@ -355,6 +355,7 @@ dmet0%tnight = 0.
 dmet0%swe    = 0.
 dmet0%swe_max = 0.
 dmet0%asnow  = 0
+dmet0%aet    = 0.
 
 soilw%w = soilw%whc
 
@@ -536,6 +537,7 @@ do m = 1,nmos
       dmet1(i)%swe_max = dmet0(i)%swe_max
       dmet1(i)%asnow = dmet0(i)%asnow
       dmet1(i)%Bsw   = dmet0(i)%Bsw
+      dmet1(i)%aet   = dmet0(i)%aet
 
       dmet0(i) = dmet1(i)
 
@@ -679,6 +681,7 @@ do m = 1,nmos
       dmet1(i)%swe_max = dmet0(i)%swe_max
       dmet1(i)%asnow = dmet0(i)%asnow
       dmet1(i)%Bsw   = dmet0(i)%Bsw
+      dmet1(i)%aet   = dmet0(i)%aet
       
       dmet0(i) = dmet1(i)
 
