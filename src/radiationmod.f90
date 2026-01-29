@@ -39,18 +39,19 @@ real(sp) :: pisec = 86400. / pi
 
 ! local variables
 
-real(dp) :: lat   ! latitude (degrees)
-real(sp) :: elv   ! elevation (m)
-real(sp) :: tday  ! daytime mean temperature (C)
-real(sp) :: prec  ! daily total precipitation
-real(sp) :: cldf  ! cloud cover fraction
-real(sp) :: tdew  ! estimated dewpoint temperature (degC)
-
-real(sp) :: tcm   ! temperature of the coldest month
-real(sp) :: Pann  ! total annual precipitation (mm) 
-real(sp) :: Pjj   ! precipitation equitability index 
-real(sp) :: Ratm  ! relative atmospheric pressure (based on elevation)
-real(sp) :: P     ! mean atmospheric pressure (based on elevation)
+real(dp) :: lat     ! latitude (degrees)
+real(sp) :: elv     ! elevation (m)
+real(sp) :: tday    ! daytime mean temperature (C)
+real(sp) :: tnight  ! nighttime mean temperature (C)
+real(sp) :: prec    ! daily total precipitation
+real(sp) :: cldf    ! cloud cover fraction
+real(sp) :: tdew    ! estimated dewpoint temperature (degC)
+  
+real(sp) :: tcm     ! temperature of the coldest month
+real(sp) :: Pann    ! total annual precipitation (mm) 
+real(sp) :: Pjj     ! precipitation equitability index 
+real(sp) :: Ratm    ! relative atmospheric pressure (based on elevation)
+real(sp) :: P       ! mean atmospheric pressure (based on elevation)
 
 real(sp) :: albedo 
 
@@ -61,12 +62,15 @@ real(sp) :: delta   ! solar declination (degrees)
 real(sp) :: direct  ! mean daily direct beam surface downwelling shortwave (W m-2)
 real(sp) :: diffuse ! mean daily diffuse surface downwelling shortwave (W m-2)
 
-real(sp) :: rad0    ! daily mean top-of-the-atmosphere insolation (W m-2)
 real(sp) :: dayl    ! day length (h)
 
 real(sp) :: sw_rad  ! total surface downwelling shortwave (W m-2)
-real(sp) :: lw_rad  ! net longwave from surf_lw2 (Sandoval)(kJ m-2 d-1)
+real(sp) :: lw_rad  ! net longwave from surf_lw2 (Sandoval)(W m-2)
 real(sp) :: lw_rad2 ! net longwave from surf_lw (Josey)(W m-2)
+
+real(sp) :: lw_day   ! longwave radiation, daytime mean (W m-2)
+real(sp) :: lw_night ! longwave radiation, nighttime mean (W m-2)
+
 real(sp) :: lw_down ! downwelling longwave (W m-2)
 real(sp) :: lw_up   ! upwelling longwave (W m-2)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
@@ -83,7 +87,7 @@ real(sp) :: slope   ! slope (rad)
 real(sp) :: aspect  ! aspect (rad)
 real(sp) :: hs      ! hour angle of sunset (rad)
 real(sp) :: hn      ! net radiation cross-over hour angle (rad)
-real(sp) :: sinh
+real(sp) :: sinhs   ! sin of the hour angle of sunset
 real(sp) :: ru
 real(sp) :: rv
 real(sp) :: rw
@@ -103,24 +107,25 @@ integer :: i
 
 ! ----------------------------------------------------------------------------------
 
-rad0   = dmet%rad0
+toa_sw = dmet%rad0
 dayl   = dmet%dayl
 delta  = dmet%delta
 
 albedo = dmet%Bsw
 
-tmin = dmet%tmin
-tmax = dmet%tmax
-tday = dmet%tday
-cldf = dmet%cldf
-prec = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
-aet  = dmet%aet
+tmin   = dmet%tmin
+tmax   = dmet%tmax
+tday   = dmet%tday
+tnight = dmet%tnight
+cldf   = dmet%cldf
+prec   = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
+aet    = dmet%aet
 
 lat    = pixel%lat
 elv    = pixel%elv
-phi    = pixel%phi
-slope  = pixel%slope
-aspect = pixel%aspect
+phi    = pixel%phi    ! latitude (rad)
+slope  = pixel%srad   ! slope inclination (rad)
+aspect = pixel%gamma  ! slope orientation (rad), 0 = S, values increasing clockwise
 
 tcm  = pixel%tcm
 Pjj  = pixel%Pjj
@@ -128,8 +133,9 @@ Pann = pixel%Pann
 Ratm = pixel%Ratm
 P    = pixel%P
 
-ru = sin(delta) * sin(phi)
-rv = cos(delta) * cos(phi)
+! ----
+
+call hourangle(delta,phi,slope,aspect,ru,rv,hs,sinhs)
 
 if (ru / rv >= 1.) then
   hs = pi
@@ -140,9 +146,6 @@ else
 end if
 
 ! ----
-! convert W m-2 to kJ m-2 d-1
-
-toa_sw = rad0 ! * dayl * 3.6
 
 ! calculate the airmass based on latitude, solar declination, daylength, and relative pressure
 
@@ -152,15 +155,11 @@ call airmass(lat,delta/pir,dayl,Ratm,air)
 ! presumably because evapotranspiration leads to atmospheric haze, which reduces surface radiation.
 ! This presents a problem in very dry environments with high PET but low soil moisture, so AET is
 ! relatively low. We solve this here by using the previous day's AET in place of the original PET
+! (January 2026)
 
 ! estimate dewpoint, shortwave and longwave radiation, net radiation, and potential evapotranspiration
 
-! day timestep
-
-! i = 1
-
-pet0 = 0.
-dpet = pet0
+! daytime timestep
 
 ! shortwave flux
 
@@ -169,17 +168,22 @@ call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,aet,direct,diffuse,sw_rad)
 rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
 ! longwave flux - using Josey method
-! 
+
 !   tdew = dewpoint(tmin,tmax,dpet,Pann)
 !   call surf_lw(tday,tdew,cldf,lw_rad)
 
 ! longwave flux -- Sandoval method
-sunf = sf(elv,rad0,sw_rad)
-call surf_lw2(sunf,tday,lw_rad)
 
-lw_rad = -lw_rad
+sunf = sf(elv,toa_sw,sw_rad)
 
-lwterm = (lw_rad - rw * ru) / (rw * rv)
+call surf_lw2(sunf,tday,lw_day)       ! daytime longwave radiation
+
+call surf_lw2(sunf,tnight,lw_night)   ! nighttime longwave radiation
+
+
+lw_rad = lw_day
+
+lwterm = (lw_day - rw * ru) / (rw * rv)  ! eqn 13
 
 if (lwterm <= -1.) then
   hn = pi
@@ -191,9 +195,12 @@ end if
 
 ! daily net fluxes
 
-HNpos = pisec * ((rw * ru - lw_rad) * hn + rw * rv * sin(hn))
+HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
 
-HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_rad * (pi - hn))
+HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
+
+! write(0,'(2f7.1,3f7.3,4f7.1,f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,24. * hn / (2. * pi),HNpos,HNneg
+
 
 ! Isw = sw_rad * (1. - albedo)
 
@@ -302,13 +309,22 @@ direct = sunf * tau**kp * rad0 * tau**fm   ! eqn. 2.4
 ! ----
 ! diffuse radiation
 
-zeta = zeta0(Ratm,prec,pet,albedo,sunf)
+zeta = zeta0(Ratm,prec,pet,albedo,cldf)
 
-diffuse = zeta * kag**albedo * kan**(1. - sunf) * (1 - kn * (1. - sunf)) * (tau**kp * rad0 - direct)   ! Eqn. 2.5
+! this was my misinterpretation of eqn 2.5, which led to unphysical values for diffuse radiation 
+! with surface shortwave > top-of-the-atmosphere forcing, especially under conditions of high snow and cloud cover
+
+! diffuse = zeta * kag**albedo * kan**cldf * (1. - kn * cldf) * (tau**kp * rad0 - direct)   ! Eqn. 2.5 NOT USED
+
+diffuse = zeta * (tau**kp * rad0 - direct)  ! first part of eqn 2.5
 
 ! ----
 
 sw_rad = direct + diffuse
+
+! if (sw_rad > rad0) then
+!   write(0,*)cldf,albedo,rad0,sw_rad,direct,diffuse,zeta
+! end if
 
 end subroutine surf_sw
 
@@ -356,7 +372,7 @@ end function tau0
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function zeta0(Ratm,prec,pet,albedo,sunf)
+real(sp) function zeta0(Ratm,prec,pet,albedo,cldf)
 
 ! Estimate the transmission coefficient of the atmosphere for diffuse solar irradiance, based on
 ! Yin, X. (1998). Temporally-aggregated atmospheric optical properties as a function of common climatic information: Systems development and application. 
@@ -370,22 +386,21 @@ implicit none
 
 real(sp), intent(in) :: Ratm   ! relative atmospheric pressure (see function)
 real(sp), intent(in) :: prec   ! precipitation (mm/day)
-real(sp), intent(in) :: pet    ! potential evapotranspiration (mm/day)
-real(sp), intent(in) :: albedo ! surface shortwave albedo
-real(sp), intent(in) :: sunf   ! bright sunshine duration fraction, n/N (fraction)
+real(sp), intent(in) :: pet    ! evapotranspiration (mm/day) (Yin calls for PET but we will use AET)
+real(sp), intent(in) :: albedo ! surface shortwave albedo (fraction)
+real(sp), intent(in) :: cldf   ! cloud cover (fraction)
 
 ! parameters
 
-real(sp), parameter :: kag = 3.30   ! surface albedo parameter
-real(sp), parameter :: kan = 2.32   ! cloud albedo parameter
-real(sp), parameter :: kn  = 0.686  ! cloud albedo parameter
+real(sp), parameter :: kag = 3.30   ! surface albedo multiplier (Fig. 6a)
+real(sp), parameter :: kan = 2.32   ! cloud albedo reflection multiplier (Fig. 6b)
+real(sp), parameter :: kn  = 0.686  ! cloud albedo filtering multiplier
 
 ! ----
-! calculate zeta
+! eqn 4.2
 
-zeta0 = 0.503 * exp(-1.20 * Ratm * exp(-0.633 / (prec + 1.) - 0.226 * pet)) * kag**albedo * kan**(1. - sunf) * &   ! eqn. 4.2
-        (1. - kn * (1. - sunf))
-
+zeta0 = 0.503 * exp(-1.20 * Ratm * exp(-0.633 / (prec + 1.) - 0.226 * pet)) * kag**albedo * kan**cldf * (1. - kn * cldf)
+        
 end function zeta0
 
 ! ----------------------------------------------------------------------------------------------------------------
@@ -697,6 +712,104 @@ sf = ab**c       ! Sandoval et al. eqn 12
 sf = max(min(sf,1.),0.)
 
 end function sf
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine hourangle(delta,phi,slope,aspect,ru,rv,hs,sinh)
+
+! calculate the hour angle and subcomponents of downwelling shortwave radiation
+! Sandoval et al eqns 3-6
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: delta  ! solar declination angle (rad)
+real(sp), intent(in)  :: phi    ! geodetic latitude (rad)
+real(sp), intent(in)  :: slope  ! slope inclination (rad)
+real(sp), intent(in)  :: aspect ! slope orientation (rad), 0 for slopes oriented due south with values increasing clockwise)
+real(sp), intent(out) :: ru 
+real(sp), intent(out) :: rv
+real(sp), intent(out) :: hs
+
+! local variables
+
+real(sp) :: sind
+real(sp) :: sinp
+real(sp) :: sins
+real(sp) :: sing
+
+real(sp) :: cosd
+real(sp) :: cosp
+real(sp) :: coss
+real(sp) :: cosg
+
+real(sp) :: a
+real(sp) :: b
+real(sp) :: c
+real(sp) :: sinh
+
+real(sp) :: t1
+real(sp) :: t2
+real(sp) :: t3
+
+! ----
+
+sind = sin(delta)
+sinp = sin(phi)
+sins = sin(slope)
+sing = sin(aspect)
+
+cosd = cos(delta)
+cosp = cos(phi)
+coss = cos(slope)
+cosg = cos(aspect)
+
+! --
+
+a = sind * cosp * sins * cosg - sind * sinp * coss   ! eqn 6a
+
+b = cosd * cosp * coss + cosd * sinp * sins * cosg   ! eqn 6b
+
+c = cosd * sing * sins                               ! eqn 6c
+
+sinh = sinhs(a,b,c)                                  ! eqn 5
+
+! --
+
+t1 = sind * sinp * coss           ! eqn 3, numerator first term
+t2 = sind * cosp * sins * cosg    ! eqn 3, numerator second term
+t3 = cosd * sing * sins * sinh    ! eqn 3, numerator third term
+
+ru = t1 - t2 + t3                 ! eqn 3, numerator
+
+rv = cosd * cosp * coss + cosd * sinp * sins *cosg   ! eqn 3, denominator
+
+hs = acos(-ru / rv)   ! eqn 4
+
+end subroutine hourangle
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function sinhs(a,b,c)
+
+! Sandoval et al. (2024) eqn 5
+
+use parametersmod, only : sp
+
+implicit none
+
+real(sp), intent(in)  :: a
+real(sp), intent(in)  :: b
+real(sp), intent(in)  :: c
+
+! ----
+
+sinhs = (a * c + b * sqrt(b**2 + c**2 - a**2)) / (b**2 + c**2)
+
+end function sinhs
 
 ! ----------------------------------------------------------------------------------------------------------------
 
