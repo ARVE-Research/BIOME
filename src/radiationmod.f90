@@ -101,6 +101,9 @@ real(sp) :: sunf
 
 real(sp) :: lwterm
 
+real(sp) :: hour_sw
+real(sp) :: hour_net
+
 ! counters
 
 integer :: i
@@ -139,8 +142,7 @@ P    = pixel%P
 call hourangle(delta,phi,slope,aspect,ru,rv,hs,sinhs)
 
 ! ----
-
-! calculate the atmospheric transparency (airmass) based on latitude, solar declination, daylength, and relative pressure
+! atmospheric transparency (airmass) based on latitude, solar declination, daylength, and relative pressure
 
 call airmass(lat,delta/pir,dayl,Ratm,air)
 
@@ -165,17 +167,15 @@ rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
 ! longwave flux -- Sandoval method
 
-sunf = sf(elv,toa_sw,sw_rad)          ! bright sunshine fraction as a function of elevation and sunlight attenuation
+sunf = sf(elv,toa_sw,sw_rad)         ! bright sunshine fraction as a function of elevation and sunlight attenuation Sandoval eqn 12
 
-call surf_lw2(sunf,tday,lw_day)       ! daytime longwave radiation
+call surf_lw2(sunf,tday,lw_day)      ! daytime longwave radiation
 
-call surf_lw2(sunf,tnight,lw_night)   ! nighttime longwave radiation
+call surf_lw2(sunf,tnight,lw_night)  ! nighttime longwave radiation
 
+! hour angle of net radiation crossover (shortwave = longwave) eqn 13
 
-
-lw_rad = lw_day
-
-lwterm = (lw_day - rw * ru) / (rw * rv)  ! eqn 13
+lwterm = (lw_day - rw * ru) / (rw * rv)
 
 if (lwterm <= -1.) then
   hn = pi
@@ -185,13 +185,22 @@ else
   hn = acos(lwterm)
 end if
 
-! daily net fluxes
+! positive net radiation (daytime) eqn 14
 
 HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
 
+! negative net radiation (nighttime) eqn 15
+
 HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
 
-write(0,'(2f7.1,3f7.3,4f7.1,f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,24. * hn / (2. * pi),HNpos,HNneg
+hour_sw  = 24. * hs / (2. * pi)
+hour_net = 24. * hn / (2. * pi)
+
+write(0,'(2f7.1,3f7.3,4f7.1,2f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,hour_sw,hour_net,HNpos,HNneg
+
+
+
+lw_rad = lw_day
 
 
 ! Isw = sw_rad * (1. - albedo)
@@ -475,7 +484,7 @@ real(sp), intent(out) :: lw_rad
 ! parameters
 
 real(sp), parameter :: k1 = 91.86  ! (degC)
-real(sp), parameter :: k2 =  1.95
+real(sp), parameter :: k2 =  1.96
 real(sp), parameter :: k3 =  0.20
 real(sp), parameter :: k4 =  0.088
 
@@ -488,6 +497,13 @@ end subroutine surf_lw2
 ! ----------------------------------------------------------------------------------------------------------------
 
 subroutine pet(P,Tair,lw_rad,ru,rv,rw,hn,dpet)
+
+! actual evapotranspiration from Davis et al (2017)
+! Davis, T. W., Prentice, I. C., Stocker, B. D., Thomas, R. T., Whitley, R. J., Wang, H., Evans, B. J., Gallego-Sala, A. V., 
+! Sykes, M. T., & Cramer, W. (2017). Simple process-led algorithms for simulating habitats (SPLASH v.1.0): 
+! robust indices of radiation, evapotranspiration and plant-available moisture. Geoscientific Model Development, 
+! 10(2), 689-708. doi:10.5194/gmd-10-689-2017
+
 
 use parametersmod, only : sp,pi => pi_sp
 use physicsmod,    only : Econ
@@ -523,7 +539,7 @@ hi = 0.
 
 rx = 3.6e6 * (1. + omega) * Econ(P,Tair) / 1000.
 
-dpet = 24. / pi * (Sc * hi + rx * rw * rv * (sin(hn) - sin(hi)) + (rx * rw * ru - rx * lw_rad) * (hn - hi))
+dpet = 24. / pi * (Sc * hi + rx * rw * rv * (sin(hn) - sin(hi)) + (rx * rw * ru - rx * lw_rad) * (hn - hi)) ! eqn 27b
 
 end subroutine pet
 
@@ -712,7 +728,7 @@ subroutine hourangle(delta,phi,slope,aspect,ru,rv,hs,sinh)
 ! calculate the hour angle and subcomponents of downwelling shortwave radiation
 ! Sandoval et al eqns 3-6
 
-use parametersmod, only : sp
+use parametersmod, only : sp,pi=>pi_sp
 
 implicit none
 
