@@ -134,36 +134,27 @@ Ratm = pixel%Ratm
 P    = pixel%P
 
 ! ----
+! hour angle when the solar radiation flux reaches the horizon or sunset hour (hs)
 
 call hourangle(delta,phi,slope,aspect,ru,rv,hs,sinhs)
 
-if (ru / rv >= 1.) then
-  hs = pi
-else if (ru / rv <= -1.) then
-  hs = 0.
-else
-  hs = acos(-ru / rv)
-end if
-
 ! ----
 
-! calculate the airmass based on latitude, solar declination, daylength, and relative pressure
+! calculate the atmospheric transparency (airmass) based on latitude, solar declination, daylength, and relative pressure
 
 call airmass(lat,delta/pir,dayl,Ratm,air)
 
 ! Note: in the Yin (1997,1998) formulation for downwelling shortwave, radiation depends on PET, 
 ! presumably because evapotranspiration leads to atmospheric haze, which reduces surface radiation.
 ! This presents a problem in very dry environments with high PET but low soil moisture, so AET is
-! relatively low. We solve this here by using the previous day's AET in place of the original PET
+! relatively low. We solve this here by using the previous day's AET in place of the original PET.
 ! (January 2026)
 
-! estimate dewpoint, shortwave and longwave radiation, net radiation, and potential evapotranspiration
-
-! daytime timestep
-
-! shortwave flux
+! shortwave flux using the Yin method that empirically accounts for thickness of the atmosphere and haze
 
 call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,aet,direct,diffuse,sw_rad)
+
+! Davis-Sandoval r_w term
 
 rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
@@ -174,11 +165,12 @@ rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
 
 ! longwave flux -- Sandoval method
 
-sunf = sf(elv,toa_sw,sw_rad)
+sunf = sf(elv,toa_sw,sw_rad)          ! bright sunshine fraction as a function of elevation and sunlight attenuation
 
 call surf_lw2(sunf,tday,lw_day)       ! daytime longwave radiation
 
 call surf_lw2(sunf,tnight,lw_night)   ! nighttime longwave radiation
+
 
 
 lw_rad = lw_day
@@ -199,7 +191,7 @@ HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
 
 HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
 
-! write(0,'(2f7.1,3f7.3,4f7.1,f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,24. * hn / (2. * pi),HNpos,HNneg
+write(0,'(2f7.1,3f7.3,4f7.1,f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,24. * hn / (2. * pi),HNpos,HNneg
 
 
 ! Isw = sw_rad * (1. - albedo)
@@ -787,7 +779,13 @@ ru = t1 - t2 + t3                 ! eqn 3, numerator
 
 rv = cosd * cosp * coss + cosd * sinp * sins *cosg   ! eqn 3, denominator
 
-hs = acos(-ru / rv)   ! eqn 4
+if (ru / rv >= 1.) then
+  hs = pi
+else if (ru / rv <= -1.) then
+  hs = 0.
+else
+  hs = acos(-ru / rv)       ! eqn 4
+end if
 
 end subroutine hourangle
 

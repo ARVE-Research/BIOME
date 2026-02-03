@@ -383,25 +383,25 @@ cosg = cos(aspect)
 
 ! --
 
-a = sind * cosp * sins * cosg - sind * sinp * coss
+a = sind * cosp * sins * cosg - sind * sinp * coss   ! eqn 6a
 
-b = cosd * cosp * coss + cosd * sinp * sins * cosg
+b = cosd * cosp * coss + cosd * sinp * sins * cosg   ! eqn 6b
 
-c = cosd * sing * sins
+c = cosd * sing * sins                               ! eqn 6c
 
-sinh = sinhs(a,b,c)
+sinh = sinhs(a,b,c)                                  ! eqn 5
 
 ! --
 
-t1 = sind * sinp * coss
-t2 = sind * cosp * sins * cosg
-t3 = cosd * sing * sins * sinh
+t1 = sind * sinp * coss           ! eqn 3, numerator first term
+t2 = sind * cosp * sins * cosg    ! eqn 3, numerator second term
+t3 = cosd * sing * sins * sinh    ! eqn 3, numerator third term
 
-ru = t1 - t2 + t3
+ru = t1 - t2 + t3                 ! eqn 3, numerator
 
-rv = cosd * cosp * coss + cosd * sinp * sins *cosg
+rv = cosd * cosp * coss + cosd * sinp * sins *cosg   ! eqn 3, denominator
 
-hs = acos(-ru / rv)
+hs = acos(-ru / rv)   ! eqn 4
 
 end subroutine hourangle
 
