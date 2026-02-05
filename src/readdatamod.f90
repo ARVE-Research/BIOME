@@ -189,8 +189,8 @@ integer :: ncid
 ncstat = nf90_open(climatefile,nf90_nowrite,ncid)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
-call getvar_i2(ncid,'tmp',gridinfo,climate%tmp)
-call getvar_i2(ncid,'dtr',gridinfo,climate%dtr)
+call getvar_i2(ncid,'tmin',gridinfo,climate%tmin)
+call getvar_i2(ncid,'tmax',gridinfo,climate%tmax)
 call getvar_i2(ncid,'pre',gridinfo,climate%pre)
 call getvar_i2(ncid,'wet',gridinfo,climate%wet)
 call getvar_i2(ncid,'cld',gridinfo,climate%cld)

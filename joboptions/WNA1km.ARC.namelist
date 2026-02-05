@@ -1,0 +1,19 @@
+&joboptions
+  climatefile     = '/work/kaplan_lab/datasets/inputdata_northam/1km/WNAclimate_v2026.nc'
+  soilfile        = '/work/kaplan_lab/datasets/inputdata_northam/1km/WNAsoils_v2026.nc'
+  terrainfile     = '/work/kaplan_lab/datasets/inputdata_northam/1km/WNAtopo_v2026.nc'
+  gridinfo%isproj = .true.
+/
+
+! sample run commands:
+
+! src/biome1 joboptions/NorthAm.ARC.namelist -2117500/-1337500/-2012500/-372500 output/california.nc
+
+
+! coordinate windows:
+! California: -2117500/-1337500/-2012500/-372500
+! Western U.S.: -2117500/-617500/-1392500/-112500
+
+! single pixel moist (Forks WA)  -1782809/64120
+! single pixel dry (Death Valley CA) -1511836/-1337300
+! single pixel dry (Tucson AZ) -1042289/-1892981

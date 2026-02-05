@@ -92,8 +92,8 @@ end type pixeltype
 ! ---
 
 type monclimatetype
-  real(sp) :: tmp
-  real(sp) :: dtr
+  real(sp) :: tmin
+  real(sp) :: tmax
   real(sp) :: pre
   real(sp) :: cld
   real(sp) :: wnd

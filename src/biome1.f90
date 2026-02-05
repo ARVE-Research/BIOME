@@ -284,8 +284,8 @@ do i = 1,ncells
   x = pixel(i)%x
   y = pixel(i)%y
   
-  tmin = climate(x,y,:)%tmp - 0.5 * climate(x,y,:)%dtr
-  tmax = climate(x,y,:)%tmp + 0.5 * climate(x,y,:)%dtr
+  tmin = climate(x,y,:)%tmin
+  tmax = climate(x,y,:)%tmax
   
   call newspline(tmin,ndm,[tmin(nmos),tmin(1)],daily(i,:)%tmin)
   call newspline(tmax,ndm,[tmax(nmos),tmax(1)],daily(i,:)%tmax)
