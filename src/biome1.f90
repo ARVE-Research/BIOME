@@ -166,7 +166,7 @@ call genoutputfile(jobfile,outfile,gridinfo,coords,ofid)
 ! ---------------------------------
 ! check for valid pixels
 
-ncells = count(soilinput(:,:,1)%sand /= rmissing .and. climate(:,:,1)%tmp /= rmissing .and. terrain(:,:)%elv /= rmissing .and. terrain(:,:)%thickness > 0.)
+ncells = count(soilinput(:,:,1)%sand /= rmissing .and. climate(:,:,1)%tmin /= rmissing .and. terrain(:,:)%elv /= rmissing .and. terrain(:,:)%thickness > 0.)
 
 write(0,'(a,i0,a)')' there are ',ncells,' valid gridcells'
 
@@ -222,16 +222,16 @@ do y = 1,cnty
 
     ! mean temperature of the coldest month
 
-    pixel(i)%tcm = minval(climate(x,y,:)%tmp)
-    pixel(i)%twm = maxval(climate(x,y,:)%tmp)
-    pixel(i)%wm  = imaxloc(climate(x,y,:)%tmp)
-    pixel(i)%cm  = iminloc(climate(x,y,:)%tmp)
+    pixel(i)%tcm = minval((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
+    pixel(i)%twm = maxval((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
+    pixel(i)%wm  = imaxloc((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
+    pixel(i)%cm  = iminloc((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
 
     ! precipitation equitability index, used in airmass calculations for surface radiation
     
     pixel(i)%Pann = sum(climate(x,y,:)%pre)
 
-    pixel(i)%Pjj = Pjj(climate(x,y,:)%tmp,climate(x,y,:)%pre) 
+    pixel(i)%Pjj = Pjj((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0, climate(x,y,:)%pre) 
     
     ! relative atmospheric pressure
     

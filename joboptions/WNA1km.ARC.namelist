@@ -7,7 +7,7 @@
 
 ! sample run commands:
 
-! src/biome1 joboptions/NorthAm.ARC.namelist -2117500/-1337500/-2012500/-372500 output/california.nc
+! src/biome1 joboptions/WNA1km.ARC.namelist -900000/-100000/-1400000/-200000 output/california.nc
 
 
 ! coordinate windows:
