@@ -196,7 +196,7 @@ HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night 
 hour_sw  = 24. * hs / (2. * pi)
 hour_net = 24. * hn / (2. * pi)
 
-write(0,'(2f7.1,3f7.3,4f7.1,2f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,hour_sw,hour_net,HNpos,HNneg
+! write(0,'(2f7.1,3f7.3,4f7.1,2f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,hour_sw,hour_net,HNpos,HNneg
 
 
 

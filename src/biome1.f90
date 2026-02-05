@@ -54,8 +54,7 @@ type(monclimatetype),  allocatable, dimension(:,:,:) :: climate     ! input mont
 type(soilinputtype),   allocatable, dimension(:,:,:) :: soilinput   ! soil physical properties, rectangular grid x layers
 type(soilstatetype),   allocatable, dimension(:,:)   :: soilstate   ! soil state variables per valid pixel (index,layer)
 
-real(sp), allocatable, dimension(:) :: tmin
-real(sp), allocatable, dimension(:) :: tmax
+real(sp), allocatable, dimension(:) :: tmean
 
 logical :: itsopen
 
@@ -191,6 +190,8 @@ end if
 ! ---------------------------------
 ! initialize valid pixels
 
+allocate(tmean(nmos))
+
 i = 1
 
 do y = 1,cnty
@@ -220,12 +221,14 @@ do y = 1,cnty
     pixel(i)%srad  = atan(pixel(i)%slope)        ! convert m m-1 to radians
     pixel(i)%gamma = aspectrad(pixel(i)%aspect)  ! sets south = 0 and converts to radians
 
-    ! mean temperature of the coldest month
+    ! annual temperature minima and maxima
+    
+    tmean = (climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.
 
-    pixel(i)%tcm = minval((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
-    pixel(i)%twm = maxval((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
-    pixel(i)%wm  = imaxloc((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
-    pixel(i)%cm  = iminloc((climate(x,y,:)%tmin + climate(x,y,:)%tmax) / 2.0)
+    pixel(i)%tcm = minval(tmean)
+    pixel(i)%twm = maxval(tmean)
+    pixel(i)%wm  = imaxloc(tmean)
+    pixel(i)%cm  = iminloc(tmean)
 
     ! precipitation equitability index, used in airmass calculations for surface radiation
     
@@ -269,9 +272,6 @@ end if
 
 allocate(daily(ncells,ndy))
 
-allocate(tmin(nmos))
-allocate(tmax(nmos))
-
 allocate(soilw(ncells))
 
 ! ----------------------------------------------------------------------------------------------------------------
@@ -283,12 +283,9 @@ do i = 1,ncells
 
   x = pixel(i)%x
   y = pixel(i)%y
-  
-  tmin = climate(x,y,:)%tmin
-  tmax = climate(x,y,:)%tmax
-  
-  call newspline(tmin,ndm,[tmin(nmos),tmin(1)],daily(i,:)%tmin)
-  call newspline(tmax,ndm,[tmax(nmos),tmax(1)],daily(i,:)%tmax)
+    
+  call newspline(climate(x,y,:)%tmin,ndm,[climate(x,y,nmos)%tmin,climate(x,y,1)%tmin],daily(i,:)%tmin)
+  call newspline(climate(x,y,:)%tmax,ndm,[climate(x,y,nmos)%tmax,climate(x,y,1)%tmax],daily(i,:)%tmax)
     
   call newspline(climate(x,y,:)%cld,ndm,[climate(x,y,nmos)%cld,climate(x,y,1)%cld],daily(i,:)%cld,llim=0.,ulim=100.)
   call newspline(climate(x,y,:)%wnd,ndm,[climate(x,y,nmos)%wnd,climate(x,y,1)%wnd],daily(i,:)%wnd,llim=0.)
@@ -314,9 +311,6 @@ do i = 1,ncells
   pixel(i)%Nmelt = max(0.25, min(pixel(i)%Nmelt, 10.0))
   
 end do
-
-deallocate(tmin)
-deallocate(tmax)
 
 allocate(met_in(ncells))
 allocate(dmet0(ncells))    ! for the current day
@@ -397,11 +391,11 @@ do i = 1,ncells
   ! variable initializations
 
   met_in(i)%prec = climate(x,y,m)%pre
-  met_in(i)%wetf = climate(x,y,m)%wet ! * 0.01
+  met_in(i)%wetf = climate(x,y,m)%wet
 
   met_in(i)%tmin = daily(i,doy)%tmin
   met_in(i)%tmax = daily(i,doy)%tmax
-  met_in(i)%cldf = daily(i,doy)%cld ! * 0.01
+  met_in(i)%cldf = daily(i,doy)%cld
   met_in(i)%wind = daily(i,doy)%wnd
   
   if (met_in(i)%tmin > met_in(i)%tmax) then
@@ -488,7 +482,7 @@ do m = 1,nmos
 
       met_in(i)%tmin = daily(i,d1)%tmin
       met_in(i)%tmax = daily(i,d1)%tmax
-      met_in(i)%cldf = daily(i,d1)%cld * 0.01
+      met_in(i)%cldf = daily(i,d1)%cld
       met_in(i)%wind = daily(i,d1)%wnd
       
       if (met_in(i)%tmin > met_in(i)%tmax) then
@@ -617,7 +611,7 @@ do m = 1,nmos
 
       met_in(i)%tmin = daily(i,d1)%tmin
       met_in(i)%tmax = daily(i,d1)%tmax
-      met_in(i)%cldf = daily(i,d1)%cld * 0.01
+      met_in(i)%cldf = daily(i,d1)%cld
       met_in(i)%wind = daily(i,d1)%wnd
 
       ! generate daily meteorology for next day
