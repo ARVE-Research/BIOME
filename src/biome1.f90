@@ -194,10 +194,12 @@ allocate(tmean(nmos))
 
 i = 1
 
+write(0,*)'FLAG',cntx,cnty,cntx*cnty
+
 do y = 1,cnty
   do x = 1,cntx
 
-    if (soilinput(x,y,1)%sand == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness < 0.) cycle
+    if (soilinput(x,y,1)%sand == rmissing .or. climate(x,y,1)%pre == rmissing .or. terrain(x,y)%elv == rmissing .or. terrain(x,y)%thickness <= 0.) cycle
     
     ! coordinates
     
