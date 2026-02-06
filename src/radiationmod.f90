@@ -228,6 +228,12 @@ dmet%rdirect  = direct
 dmet%rdiffuse = diffuse
 dmet%dpet     = dpet
 dmet%HNpos    = HNpos
+dmet%HNneg    = HNneg
+dmet%sunf     = sunf
+dmet%hour_sw  = hour_sw
+dmet%hour_net = hour_net
+dmet%lwday    = lw_day
+dmet%lwnight  = lw_night
 ! radiation outputs for diagnostics
 dmet%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
 dmet%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS

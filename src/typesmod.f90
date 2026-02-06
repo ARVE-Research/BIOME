@@ -280,6 +280,10 @@ type metvars_daily  ! structure for weather generator output (daily)
   ! real(sp) :: Bsnw      ! snow albedo
   
   real(sp) :: HNpos     ! daytime accumulated net radiation (MJ m-2 d-1)
+  real(sp) :: HNneg     ! nighttime accumulated net radiation (J m-2 d-1)
+  real(sp) :: sunf      ! bright sunshine fraction (0-1)
+  real(sp) :: hour_sw   ! hour angle of sunset (hours)
+  real(sp) :: hour_net  ! hour angle of net radiation crossover (hours)
   
   real(sp) :: aet       ! actual evapotranspiration (mm)
   real(sp) :: alpha     ! ratio of aet to pet

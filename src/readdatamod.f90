@@ -263,7 +263,7 @@ end do
 ! ---
 
 call getvar_i1(ncid,'USDA',gridinfo,terrain%USDA)
-call getvar_sp(ncid,'thickness',gridinfo,terrain%thickness)
+call getvar_i2(ncid,'thickness',gridinfo,terrain%thickness)
 call getvar_i2(ncid,'sand',gridinfo,soilinput%sand)
 call getvar_i2(ncid,'clay',gridinfo,soilinput%clay)
 call getvar_i2(ncid,'cfvo',gridinfo,soilinput%cfvo)

@@ -34,8 +34,16 @@ type(metvars_daily), intent(in) :: dmet
     dmet%relsat, &   ! 16 - relative saturation w/whc (0-1)
     dmet%dpet,   &   ! 17 - daily PET (mm)
     dmet%swrad,  &   ! 18 - total surface shortwave radiation (W m-2)
-    dmet%lw_rad      ! 19 - net longwave, Sandoval method (W m-2)
-    !dmet%lw_rad2     ! 20 - net longwave, Josey method (W m-2)
+    dmet%lw_rad, &   ! 19 - net longwave, Sandoval method (W m-2)
+    dmet%sunf,   &   ! 20 - sunshine fraction (0-1)
+    dmet%tday,   &   ! 21 - daytime temperature (C)
+    dmet%lwday,  &   ! 22 - daytime longwave radiation (W m-2)
+    dmet%tnight, &   ! 23 - nighttime temperature (C)
+    dmet%lwnight,&   ! 24 - nighttime longwave radiation (W m-2)
+    dmet%hour_sw, &   ! 25 - hour angle of sunset (hours)
+    dmet%hour_net, &   ! 26 - hour angle of net radiation crossover (hours)
+    dmet%HNpos,  &   ! 27 - positive (daytime) net radiation (J m-2 d-1)
+    dmet%HNneg        ! 28 - negative (nighttime) net radiation (J m-2 d-1)
 
 end subroutine writedailymetvars
 
