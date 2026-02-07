@@ -12,7 +12,6 @@ public :: psygamma
 public :: esat
 public :: desdT
 public :: Econ
-public :: Dp
 public :: pet
 public :: dewpoint
 public :: rhum

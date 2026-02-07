@@ -28,6 +28,12 @@
 ! LA, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -303058.25/-1219461.43 output/singlepixel.nc
 
+! Forks, WA (very wet temperate rainforest)
+! src/biome1 joboptions/WNA1km.ARC.namelist -687500/348500 output/forks.nc
+
+! Tri-Cities WA (dry-temperate lower Columbia Basin)
+! src/biome1 joboptions/WNA1km.ARC.namelist -313500/138500 output/tricities.nc
+
 ! coordinate windows:
 ! California: -2117500/-1337500/-2012500/-372500
 ! Western U.S.: -2117500/-617500/-1392500/-112500

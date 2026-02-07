@@ -77,6 +77,7 @@ real(sp) :: lw_up   ! upwelling longwave (W m-2)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
 real(sp) :: RH      ! relative humidity (%)
+real(sp) :: Pv      ! absolute humidity (kg water vapor m-3)
 
 real(sp) :: dpet    ! daily integral potential evapotranspiraton (mm d-1)
 real(sp) :: dpmax   ! daily maximum evapotranspiraton (mm hr-1)
@@ -204,7 +205,7 @@ call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
 
 ! dewpoint temperature and relative humidity
 
-tdew = dewpoint(tmin,tmax,dpet,Pann)
+tdew = dewpoint(tnight,tday,dpet,Pann)
 
 ! nighttime humidity
 
@@ -218,7 +219,7 @@ Pv = abshum(tnight,RH)
 
 dcon = Econ(P,tnight) * HNneg  ! eqn 62 (mm d-1), however this should depend on the atmospheric water content
 
-
+write(0,'(6f7.1,f7.3)')tmin,tnight,tday,tmax,tdew,RH,Pv
 
 ! ---------
 ! diagnostic output
