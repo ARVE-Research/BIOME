@@ -244,6 +244,14 @@ real(sp) function Econ(P,Tair)  ! (m3 kJ-1)
 ! Geoscientific Model Development, 17(10), 4229-4309. doi:10.5194/gmd-17-4229-2024
 ! because lvap is calculated in kJ, the result of this equation is kJ
 
+! NB this function is differs between the Davis et al (2017) and Sandoval et al. (2024) formulations
+! because of the addition of the 0.24 coefficient to gamma in the denominator in the newer publication.
+! This constant allows the elimination of the entrainment factor omega in calculating potential evapotranspiration.
+! Compare Davis eqns 19 and 22 with Sandoval eqn 51 and 50. See also
+! Yang, Y., & Roderick, M. L. (2019). Radiation, surface temperature and evaporation over wet surfaces. 
+! Quarterly Journal of the Royal Meteorological Society, 145(720), 1118-1129. doi:10.1002/qj.3481
+
+
 use parametersmod, only : sp
 
 implicit none

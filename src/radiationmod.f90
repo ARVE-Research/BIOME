@@ -193,6 +193,12 @@ HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
 
 HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
 
+! potential evapotranspiration
+
+call pet(HNpos,dpet)
+
+
+
 hour_sw  = 24. * hs / (2. * pi)
 hour_net = 24. * hn / (2. * pi)
 
@@ -502,16 +508,20 @@ end subroutine surf_lw2
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine pet(P,Tair,lw_rad,ru,rv,rw,hn,dpet)
+subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
 
-! actual evapotranspiration from Davis et al (2017)
-! Davis, T. W., Prentice, I. C., Stocker, B. D., Thomas, R. T., Whitley, R. J., Wang, H., Evans, B. J., Gallego-Sala, A. V., 
-! Sykes, M. T., & Cramer, W. (2017). Simple process-led algorithms for simulating habitats (SPLASH v.1.0): 
-! robust indices of radiation, evapotranspiration and plant-available moisture. Geoscientific Model Development, 
-! 10(2), 689-708. doi:10.5194/gmd-10-689-2017
+! Estimation of daily total equilibrium evapotranspiration (dpet), mm
+! and hourly maximum evapotranspiration rate (mm h-1)
+! based on equations in Sandoval et al. and Davis et al. and source code
 
+! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
+! actual evapotranspiration. AET is instead is calculated as a function of mean daytime shortwave and longwave fluxes,
+! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
+! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
 
-use parametersmod, only : sp,pi => pi_sp
+! 
+
+use parametersmod, only : sp
 use physicsmod,    only : Econ
 
 implicit none
@@ -520,66 +530,32 @@ implicit none
 
 real(sp), intent(in)  :: P       ! mean air pressure (Pa)
 real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
+
 real(sp), intent(in)  :: lw_rad  ! mean longwave radiation (W m-2)
-real(sp), intent(in)  :: ru      ! 
+real(sp), intent(in)  :: ru      ! aggregate variables related to radiation
 real(sp), intent(in)  :: rv      ! 
 real(sp), intent(in)  :: rw      ! 
-real(sp), intent(in)  :: hn      ! 
-real(sp), intent(out) :: dpet    ! potential evapotranspiration (mm d-1)
 
-! parameters
-
-real(sp), parameter :: Sc    = 1.05  ! maximum potential evapotranspiration supply rate (mm h-1) Davis et al (2017)
-real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
+real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
+real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
 
 ! local variables
 
-real(sp) :: hi
-real(sp) :: rx
+real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
+real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
 
 ! ----
 
-! write(0,*)P,Tair
+Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
 
-hi = 0.
+dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
 
-rx = 3.6e6 * (1. + omega) * Econ(P,Tair) / 1000.
+rx = 3.6e6 * Ec / 1000.  ! double check units
 
-dpet = 24. / pi * (Sc * hi + rx * rw * rv * (sin(hn) - sin(hi)) + (rx * rw * ru - rx * lw_rad) * (hn - hi)) ! eqn 27b
+dpmax = rx * ((rw * (ru + rv)) - lw_rad)
 
 end subroutine pet
-
-! ----------------------------------------------------------------------------------------------------------------
-
-subroutine netrad_pet(sw_rad,lw_rad,albedo,P,Tair,netrad,pet)
-
-use parametersmod, only : sp,tfreeze
-use physicsmod,    only : desdT,psygamma,lvap,Econ
-
-implicit none
-
-! arguments
-
-real(sp), intent(in)  :: P       ! mean air pressure (Pa)
-real(sp), intent(in)  :: Tair    ! air temperature (degC)
-real(sp), intent(in)  :: sw_rad  ! downwelling shortwave radiation (kJ m-2 d-1)
-real(sp), intent(in)  :: lw_rad  ! net longwave radiation (kJ m-2 d-1)
-real(sp), intent(in)  :: albedo  ! surface shortwave albedo (fraction)
-real(sp), intent(out) :: netrad  ! net radiation (kJ m-2 d-1)
-real(sp), intent(out) :: pet     ! potential evapotranspiration (mm d-1)
-
-! parameter
-
-real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
-
-! ----
-! calculate net radiation and PET
-
-netrad = (1. - albedo) * sw_rad - lw_rad                    ! (kJ m-2 d-1)
-
-pet = (1. + omega) * 1000. * Econ(P,Tair) * max(netrad,0.)  ! 1.e3 converts m to mm
-
-end subroutine netrad_pet
 
 ! ----------------------------------------------------------------------------------------------------------------
 

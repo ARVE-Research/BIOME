@@ -1226,3 +1226,86 @@ end if
   		! write(0,*) 'DEBUG swe :', dmet0(i)%swe
 	  ! end if
 
+
+
+subroutine pet(P,Tair,lw_rad,ru,rv,rw,hn,dpet)
+
+! actual evapotranspiration from Davis et al (2017)
+! Davis, T. W., Prentice, I. C., Stocker, B. D., Thomas, R. T., Whitley, R. J., Wang, H., Evans, B. J., Gallego-Sala, A. V., 
+! Sykes, M. T., & Cramer, W. (2017). Simple process-led algorithms for simulating habitats (SPLASH v.1.0): 
+! robust indices of radiation, evapotranspiration and plant-available moisture. Geoscientific Model Development, 
+! 10(2), 689-708. doi:10.5194/gmd-10-689-2017
+
+
+use parametersmod, only : sp,pi => pi_sp
+use physicsmod,    only : Econ
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: lw_rad  ! mean longwave radiation (W m-2)
+real(sp), intent(in)  :: ru      ! 
+real(sp), intent(in)  :: rv      ! 
+real(sp), intent(in)  :: rw      ! 
+real(sp), intent(in)  :: hn      ! 
+real(sp), intent(out) :: dpet    ! potential evapotranspiration (mm d-1)
+
+! parameters
+
+real(sp), parameter :: Sc    = 1.05  ! maximum potential evapotranspiration supply rate (mm h-1) Davis et al (2017)
+real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
+
+! local variables
+
+real(sp) :: hi
+real(sp) :: rx
+
+! ----
+
+! write(0,*)P,Tair
+
+hi = 0.
+
+rx = 3.6e6 * (1. + omega) * Econ(P,Tair) / 1000.
+
+dpet = 24. / pi * (Sc * hi + rx * rw * rv * (sin(hn) - sin(hi)) + (rx * rw * ru - rx * lw_rad) * (hn - hi)) ! eqn 27b
+
+end subroutine pet
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine netrad_pet(sw_rad,lw_rad,albedo,P,Tair,netrad,pet)
+
+use parametersmod, only : sp,tfreeze
+use physicsmod,    only : desdT,psygamma,lvap,Econ
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: sw_rad  ! downwelling shortwave radiation (kJ m-2 d-1)
+real(sp), intent(in)  :: lw_rad  ! net longwave radiation (kJ m-2 d-1)
+real(sp), intent(in)  :: albedo  ! surface shortwave albedo (fraction)
+real(sp), intent(out) :: netrad  ! net radiation (kJ m-2 d-1)
+real(sp), intent(out) :: pet     ! potential evapotranspiration (mm d-1)
+
+! parameter
+
+real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
+
+! ----
+! calculate net radiation and PET
+
+netrad = (1. - albedo) * sw_rad - lw_rad                    ! (kJ m-2 d-1)
+
+pet = (1. + omega) * 1000. * Econ(P,Tair) * max(netrad,0.)  ! 1.e3 converts m to mm
+
+end subroutine netrad_pet
+
+
+
