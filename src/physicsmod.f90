@@ -421,6 +421,7 @@ real(sp), intent(in)  :: RH    ! relative humidity (%)
 ! local variables
 
 real(sp) :: Ta      ! air temperature (K)
+real(sp) :: Pvs     ! absolute humidity 
 
 ! ------
 
