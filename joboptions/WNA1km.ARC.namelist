@@ -16,10 +16,19 @@
 ! redding, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -615584.46/-465865.46 output/singlepixel.nc
 
+! death valley, CA
+! src/biome1 joboptions/WNA1km.ARC.namelist -196248.64/-950099.26 output/singlepixel.nc
+
+! carson pass, CA
+! src/biome1 joboptions/WNA1km.ARC.namelist -428047.90/-706770.64 output/singlepixel.nc
+
+! san luis obispo, CA
+! src/biome1 joboptions/WNA1km.ARC.namelist -426021.46/-919172.98 output/singlepixel.nc
+
+! LA, CA
+! src/biome1 joboptions/WNA1km.ARC.namelist -303058.25/-1219461.43 output/singlepixel.nc
+
 ! coordinate windows:
 ! California: -2117500/-1337500/-2012500/-372500
 ! Western U.S.: -2117500/-617500/-1392500/-112500
 
-! single pixel moist (Forks WA)  -1782809/64120
-! single pixel dry (Death Valley CA) -1511836/-1337300
-! single pixel dry (Tucson AZ) -1042289/-1892981
