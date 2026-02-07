@@ -13,7 +13,10 @@ public :: esat
 public :: desdT
 public :: Econ
 public :: Dp
-public :: PET
+public :: pet
+public :: dewpoint
+public :: rhum
+public :: abshum
 
 contains
 
@@ -275,35 +278,18 @@ end function Econ
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function Dp(P,Tair,Inet)  ! (mm h-1)
+subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
 
-! Function to calculated hourly evaporative demand, based on:
-! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
-! Simple process-led algorithms for simulating habitats (SPLASH v.2.0): robust calculations of water and energy fluxes. 
-! Geoscientific Model Development, 17(10), 4229-4309. doi:10.5194/gmd-17-4229-2024
+! Estimation of daily total equilibrium evapotranspiration (dpet), mm
+! and hourly maximum evapotranspiration rate (mm h-1)
+! based on equations in Sandoval et al. and Davis et al. and source code
 
-use parametersmod, only : sp
+! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
+! actual evapotranspiration. AET is instead calculated as a function of mean daytime shortwave and longwave fluxes,
+! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
+! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
 
-implicit none
-
-! arguments
-
-real(sp), intent(in) :: P     ! air pressure (Pa)
-real(sp), intent(in) :: Tair  ! air temperature (degC)
-real(sp), intent(in) :: Inet  ! net radiation (W m-2)
-
-Dp = 1000. * 3600. * Econ(P,Tair) * Inet  ! eqn 50
-
-end function Dp
-
-! ----------------------------------------------------------------------------------------------------------------
-
-real(sp) function PET(P,Tair,netrad)  ! (mm)
-
-! Function to calculate integrated daily potential evapotranspiration, based on:
-! Sandoval, D., Prentice, I. C., & Nóbrega, R. L. B. (2024). 
-! Simple process-led algorithms for simulating habitats (SPLASH v.2.0): robust calculations of water and energy fluxes. 
-! Geoscientific Model Development, 17(10), 4229-4309. doi:10.5194/gmd-17-4229-2024
+! 
 
 use parametersmod, only : sp
 
@@ -311,19 +297,140 @@ implicit none
 
 ! arguments
 
-real(sp), intent(in) :: P       ! air pressure (Pa)
-real(sp), intent(in) :: Tair    ! air temperature (degC)
-real(sp), intent(in) :: netrad  ! net radiation (kJ m-2 d-1)
+real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
 
-! parameter
+real(sp), intent(in)  :: lw_rad  ! daily mean longwave radiation (W m-2)
+real(sp), intent(in)  :: ru      ! simplification variables related to radiation
+real(sp), intent(in)  :: rv      ! 
+real(sp), intent(in)  :: rw      ! 
 
-real(sp), parameter :: omega = 0.26  ! entrainment factor, dimensionless (Sandoval et al., 2024; Priestley and Taylor, 1972)
+real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
+real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
+
+! local variables
+
+real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
+real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
 
 ! ----
 
-pet = (1. + omega) * 1000. * Econ(P,Tair) * max(netrad,0.)  ! 1000 converts m to mm
+Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
 
-end function PET
+dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
+
+rx = 3600. * Ec     ! m3 kJ-1 -> mm m2 W-1 h-1 [1000 (mm/m) / (1000 (J / kJ) / 3600 (s/h))]
+
+dpmax = rx * ((rw * (ru + rv)) - lw_rad)  ! Sandoval eqn 53
+
+end subroutine pet
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function dewpoint(tmin,tmax,dpet,pann)
+
+! Estimate dewpoint temperature
+! Based on Kimball, J. S., Running, S. W., & Nemani, R. (1997). 
+! An improved method for estimating surface humidity from daily minimum temperature. 
+! Agricultural and Forest Meteorology, 85(1), 87-98. doi:https://doi.org/10.1016/S0168-1923(96)02366-0
+
+use parametersmod, only : sp,tfreeze
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: tmin  ! daily minimum temperature (degC)
+real(sp), intent(in) :: tmax  ! daily maximum temperature (degC)
+real(sp), intent(in) :: dpet  ! daily evapotranspiration (mm)
+real(sp), intent(in) :: pann  ! total annual precipitation (mm)
+
+! local variables
+
+real(sp) :: tminK
+real(sp) :: tmaxK
+real(sp) :: EF
+real(sp) :: tdewK
+
+! ---
+
+tminK = tmin + tfreeze
+tmaxK = tmax + tfreeze
+
+EF = dpet / pann
+
+tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
+
+dewpoint = tdewK - tfreeze
+
+end function dewpoint
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function rhum(tair,tdew)  ! (%)
+
+! Estimate relative humidity from air temperature and dewpoint temperature
+! Based on Lawrence, M. G. (2005). The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: 
+! A Simple Conversion and Applications. 
+! Bulletin of the American Meteorological Society, 86(2), 225-234. doi:10.1175/bams-86-2-225
+
+use parametersmod, only : sp,tfreeze,Rw
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: tair  ! air temperature (degC)
+real(sp), intent(in)  :: tdew  ! dewpoint temperature (degC)
+
+! local variables
+
+real(sp) :: Ta      ! air temperature (K)
+real(sp) :: Td      ! dewpoint temperature (K)
+real(sp) :: L       ! enthalpy of vaporization of water (J kg-1)
+
+! ------
+
+Ta = tair + tfreeze
+Td = tdew + tfreeze
+
+L = 1.91846e6 * (Ta / (Ta))**2  ! (J kg-1) Eqn. from Henderson-Sellers (1984)
+
+rhum = 100. * exp(-L / (Rw * Ta * Td) * (Ta - Td)) ! eqn 12
+
+end function rhum
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function abshum(tair,RH)
+
+! Function to calculate absolute humidity, based on:
+! Stull, R. (2017). Practical Meteorology: An Algebra-based Survey of Atmospheric Science. 
+! Vancouver, Canada: Dept. of Earth, Ocean & Atmospheric Sciences, University of British Columbia.
+
+use parametersmod, only : sp,tfreeze,Rw
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: Tair  ! air temperature (degC)
+real(sp), intent(in)  :: RH    ! relative humidity (%)
+
+! local variables
+
+real(sp) :: Ta      ! air temperature (K)
+
+! ------
+
+Ta = tair + tfreeze
+
+Pvs = esat(Tair) / (Rw * Ta)
+
+abshum = Pvs * RH / 100. 
+
+end function abshum
 
 ! ----------------------------------------------------------------------------------------------------------------
 

@@ -23,6 +23,7 @@ subroutine radpet(pixel,dmet)
 
 use parametersmod, only : sp,dp,pi => pi_sp,pir => pir_sp
 use typesmod,      only : orbitpars,airmasspars,pixeltype,solarpars,metvars_daily
+use physicsmod,    only : Econ,pet,dewpoint,rhum,abshum
 use airmassmod,    only : airmass
 
 implicit none
@@ -75,8 +76,12 @@ real(sp) :: lw_down ! downwelling longwave (W m-2)
 real(sp) :: lw_up   ! upwelling longwave (W m-2)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
-real(sp) :: pet0    ! previous value for PET (mm d-1)
-real(sp) :: dpet    ! day potential evapotranspiraton (mm)
+real(sp) :: RH      ! relative humidity (%)
+
+real(sp) :: dpet    ! daily integral potential evapotranspiraton (mm d-1)
+real(sp) :: dpmax   ! daily maximum evapotranspiraton (mm hr-1)
+real(sp) :: dcon    ! daily condensation (mm d-1)
+
 real(sp) :: aet     ! actual evapotranspiration of the previous day (mm)
 
 real(sp) :: tmin
@@ -195,9 +200,28 @@ HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night 
 
 ! potential evapotranspiration
 
-call pet(HNpos,dpet)
+call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
+
+! dewpoint temperature and relative humidity
+
+tdew = dewpoint(tmin,tmax,dpet,Pann)
+
+! nighttime humidity
+
+RH = rhum(tnight,tdew)
+
+! absolute humidity (Stull, 2017 eqn 4.14c)
+
+Pv = abshum(tnight,RH)
+
+! condensation
+
+dcon = Econ(P,tnight) * HNneg  ! eqn 62 (mm d-1), however this should depend on the atmospheric water content
 
 
+
+! ---------
+! diagnostic output
 
 hour_sw  = 24. * hs / (2. * pi)
 hour_net = 24. * hn / (2. * pi)
@@ -206,14 +230,14 @@ hour_net = 24. * hn / (2. * pi)
 
 
 
-lw_rad = lw_day
+! lw_rad = lw_day
 
 
 ! Isw = sw_rad * (1. - albedo)
 
 ! netrad = Isw - lw_rad
 
-call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
+! call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
 
 ! write(0,'(f8.2,2f8.3,6f8.2)')toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad,dpet,aet
 
@@ -505,136 +529,6 @@ real(sp), parameter :: k4 =  0.088
 lw_rad = (k4 + (1. - k3) * sunf) * (k1 + k2 * Tair)
 
 end subroutine surf_lw2
-
-! ----------------------------------------------------------------------------------------------------------------
-
-subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
-
-! Estimation of daily total equilibrium evapotranspiration (dpet), mm
-! and hourly maximum evapotranspiration rate (mm h-1)
-! based on equations in Sandoval et al. and Davis et al. and source code
-
-! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
-! actual evapotranspiration. AET is instead is calculated as a function of mean daytime shortwave and longwave fluxes,
-! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
-! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
-
-! 
-
-use parametersmod, only : sp
-use physicsmod,    only : Econ
-
-implicit none
-
-! arguments
-
-real(sp), intent(in)  :: P       ! mean air pressure (Pa)
-real(sp), intent(in)  :: Tair    ! air temperature (degC)
-real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
-
-real(sp), intent(in)  :: lw_rad  ! mean longwave radiation (W m-2)
-real(sp), intent(in)  :: ru      ! aggregate variables related to radiation
-real(sp), intent(in)  :: rv      ! 
-real(sp), intent(in)  :: rw      ! 
-
-real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
-real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
-
-! local variables
-
-real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
-real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
-
-! ----
-
-Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
-
-dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
-
-rx = 3.6e6 * Ec / 1000.  ! double check units
-
-dpmax = rx * ((rw * (ru + rv)) - lw_rad)
-
-end subroutine pet
-
-! ----------------------------------------------------------------------------------------------------------------
-
-real(sp) function dewpoint(tmin,tmax,dpet,pann)
-
-! Estimate dewpoint temperature
-! Based on Kimball, J. S., Running, S. W., & Nemani, R. (1997). 
-! An improved method for estimating surface humidity from daily minimum temperature. 
-! Agricultural and Forest Meteorology, 85(1), 87-98. doi:https://doi.org/10.1016/S0168-1923(96)02366-0
-
-use parametersmod, only : sp,tfreeze
-
-implicit none
-
-! arguments
-
-real(sp), intent(in) :: tmin  ! daily minimum temperature (degC)
-real(sp), intent(in) :: tmax  ! daily maximum temperature (degC)
-real(sp), intent(in) :: dpet  ! daily evapotranspiration (mm)
-real(sp), intent(in) :: pann  ! total annual precipitation (mm)
-
-! local variables
-
-real(sp) :: tminK
-real(sp) :: tmaxK
-real(sp) :: EF
-real(sp) :: tdewK
-
-! ---
-
-tminK = tmin + tfreeze
-tmaxK = tmax + tfreeze
-
-EF = dpet / pann
-
-tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
-
-dewpoint = tdewK - tfreeze
-
-end function dewpoint
-
-! ----------------------------------------------------------------------------------------------------------------
-
-real(sp) function rhum(tair,tdew)
-
-! Estimate relative humidity from air temperature and dewpoint temperature
-! Based on Lawrence, M. G. (2005). The Relationship between Relative Humidity and the Dewpoint Temperature in Moist Air: 
-! A Simple Conversion and Applications. 
-! Bulletin of the American Meteorological Society, 86(2), 225-234. doi:10.1175/bams-86-2-225
-
-use parametersmod, only : sp,tfreeze
-
-implicit none
-
-! arguments
-
-real(sp), intent(in)  :: tair  ! air temperature (degC)
-real(sp), intent(in)  :: tdew  ! dewpoint temperature (degC)
-
-! parameter
-
-real(sp), parameter :: Rw = 461.5  ! gas constant for water vapor (J K-1 kg-1)
-
-! local variables
-
-real(sp) :: Ta
-real(sp) :: Td
-real(sp) :: L       ! enthalpy of vaporization of water (J kg-1)
-
-! ------
-
-Ta = tair + tfreeze
-Td = tdew + tfreeze
-
-L = 1.91846e6 * (Ta / (Ta))**2  ! (J kg-1) Eqn. from Henderson-Sellers (1984)
-
-rhum = 100. * exp(-L / (Rw * Ta * Td) * (Ta - Td)) ! eqn 12
-
-end function rhum
 
 ! ----------------------------------------------------------------------------------------------------------------
 
