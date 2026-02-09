@@ -26,7 +26,7 @@ subroutine insol(truelon,orbit,phi,solar)
 
 ! calculates total daily insolation at the top of the atmosphere for a given day and latitude
 
-use parametersmod, only : sp,dp,pi,pir
+use parametersmod, only : sp,dp,pi => pi_dp,pir => pir_dp
 use typesmod,      only : orbitpars,solarpars
 
 implicit none
@@ -139,7 +139,7 @@ real(dp) function truelon(orbit,cal,doy)
 
 ! calculate the true longitude of a day of the year expressed as mean longitude relative to the vernal equinox
 
-use parametersmod, only : dp,pi,pir
+use parametersmod, only : dp,pi => pi_dp,pir => pir_dp
 use typesmod,      only : orbitpars,calendartype
 
 implicit none

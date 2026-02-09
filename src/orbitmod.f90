@@ -14,7 +14,7 @@ subroutine getorbitpars(yrbp,orbit)
 
 ! estimate the orbital parameters using linear interpolation from the lookup table 
 
-use parametersmod, only : dp,pir
+use parametersmod, only : dp,pir => pir_dp
 use typesmod,      only : orbitpars
 use utilitymod,    only : pos,spline,cubspline,angleinterp
 use netcdf

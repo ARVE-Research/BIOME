@@ -726,7 +726,7 @@ real(dp) function angleinterp_dp(a0,a1,wgt)
 
 ! interpolate between two angles given in degrees given weight as wgt, returns degrees
 
-use parametersmod, only : dp,pi,pir
+use parametersmod, only : dp,pi => pi_dp,pir => pir_dp
 
 implicit none
 

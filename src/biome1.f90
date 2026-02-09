@@ -9,7 +9,7 @@ use insolationmod,   only : truelon,insol
 use netcdfoutputmod
 use newsplinemod
 use orbitmod,        only : getorbitpars
-use parametersmod,   only : i8,sp,dp,nmos,B0,pir,rmissing,dmetfile_unit !,present_mon_noleap
+use parametersmod,   only : i8,sp,dp,nmos,B0,pir => pir_sp,rmissing,dmetfile_unit !,present_mon_noleap
 use pedotransfermod, only : soilproperties
 use physicsmod,      only : stdP
 use radiationmod,    only : radpet

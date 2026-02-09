@@ -20,7 +20,7 @@ subroutine diurnaltemp(met0,met1)
 
 ! NB there is an error in this paper, eqn. 7a should have a sin after the alpha.
 
-use parametersmod, only : i4,sp,pi
+use parametersmod, only : i4,sp,pi => pi_sp
 use typesmod,      only : metvars_daily
 use utilitymod,    only : roundto
 

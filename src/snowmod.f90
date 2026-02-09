@@ -1,6 +1,6 @@
 module snowmod
 
-use parametersmod, only : sp, pi
+! use parametersmod, only : sp, pi
 
 implicit none
 
@@ -15,7 +15,7 @@ subroutine snow(pixel,dmet)
 
 ! calculate daily snow dynamics
 
-use parametersmod, only : B0
+use parametersmod, only : sp,B0
 use typesmod,      only : pixeltype,metvars_daily
 
 implicit none
@@ -154,7 +154,7 @@ subroutine calc_snow_cover_fraction(pixel, dmet)
 
 ! Calculate snow cover fraction during melt using Swenson & Lawrence (2012) eq. 4
 
-use parametersmod, only : sp, pi
+use parametersmod, only : sp,pi => pi_sp
 use typesmod,      only : pixeltype, metvars_daily
 
 implicit none

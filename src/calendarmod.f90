@@ -123,7 +123,7 @@ subroutine kepler_time(eccen,T,theta_deg,time)
 !         Geoscientific Model Development, 12:3889-3913, doi: 10.5194/gmd-12-3889-2019
 !   - available from GitHub:  https://github.com/pjbartlein/PaleoCalAdjust or Zenodo:  https://doi.org/10.5281/zenodo.1478824
 
-use parametersmod, only : dp,pi,pir
+use parametersmod, only : dp,pi => pi_dp,pir => pir_dp
 
 implicit none
 
@@ -167,7 +167,7 @@ subroutine monlen(yrlen,veqday,imonlen,orbit,rmonlen,rmonbeg,rmonmid,rmonend) !,
 !         Geoscientific Model Development, 12:3889-3913, doi: 10.5194/gmd-12-3889-2019
 !   - available from GitHub:  https://github.com/pjbartlein/PaleoCalAdjust or Zenodo:  https://doi.org/10.5281/zenodo.1478824
 
-use parametersmod, only : dp,pi,nmos
+use parametersmod, only : dp,pi => pi_dp,nmos
 use typesmod,      only : orbitpars
 
 implicit none
