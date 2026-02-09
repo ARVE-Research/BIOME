@@ -519,6 +519,10 @@ do m = 1,nmos
 
       call snow(pixel(i),dmet0(i))
       
+      ! water infiltration at the soil surface
+      
+      ! call
+      
       ! soil water balance, including actual evapotranspiration and alpha
       
       call soilwater(dmet0(i),soilw(i))
