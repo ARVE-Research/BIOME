@@ -287,7 +287,7 @@ end function pwater
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-real(sp) function muw(P,Tair)   ! (Pa s)
+real(sp) function muwater(P,Tair)   ! (Pa s)
 
 ! Function to calculate the viscosity of water as this quantity is influenced by pressure and temperature, after:
 ! Likhachev, E. R. (2003). Dependence of Water Viscosity on Temperature and Pressure. Technical Physics, 48(4), 514-515.
@@ -326,9 +326,9 @@ Pbar = P * 1.e-5
 
 ! Likhachev eqn 2
 
-muw = mu0 * exp(a * Pbar + (E - b * Pbar) / (R * (T - theta - c * Pbar)))
+muwater = mu0 * exp(a * Pbar + (E - b * Pbar) / (R * (T - theta - c * Pbar)))
 
-end function muw
+end function muwater
 
 ! ----------------------------------------------------------------------------------------------------------------
 

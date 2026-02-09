@@ -25,22 +25,18 @@ real(sp), parameter :: Tfreeze = 273.15 ! freezing temperature of freshwater (K)
 
 real(sp), parameter :: Rw = 461.5  ! gas constant for water vapor (J K-1 kg-1)
 
-real(dp), parameter :: pi  = 3.14159265358979323846_dp !26433 83279 50288 41971 69399 37510 (unitless)
-real(dp), parameter :: pir = pi / 180._dp
-
-integer, parameter :: npft = 13
-
 real(sp), parameter :: pi_sp = 3.1415926
 real(dp), parameter :: pi_dp = 3.14159265358979323846_dp
 
+real(dp), parameter :: pir_dp = pi_dp / 180._dp
 real(sp), parameter :: pir_sp = pi_sp / 180.
 
 real(sp), parameter :: B0     = 0.17 ! background albedo
 
-! viscosity and density of water at SATP
-! IUPAC defines SATP (Standard Ambient Temperature and Pressure) as a 
-! temperature of 298.15 K (25.00 °C; 77.00 °F) 
-! and an absolute pressure of exactly 1 atm (101.325 kPa)
+real(sp), parameter :: g = 6.67430e-11  ! gravitational constant (m3 kg-1 s-2)
+
+
+integer, parameter :: npft = 13
 
 
 ! --------------------------------------------------------------------------------------------------------

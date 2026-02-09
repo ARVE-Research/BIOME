@@ -2,13 +2,49 @@ module soilphysicsmod
 
 implicit none
 
+public :: Ksat_env
 public :: infiltration
 
 contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine infiltration(dmet,soilstate)
+real(sp) function Ksat_env(Ksat,P,Tair)
+
+use parametersmod, only : sp,g
+use physicsmod,    only : pwater,muwater
+
+implicit none
+
+! Function to adjust the saturated conductivity of soil to ambient environmental conditions
+! based on temperature and pressure
+
+! arguments
+
+real(sp), intent(in) :: Ksat  ! saturated hydraulic conductivity under standard conditions (mm h-1)
+real(sp), intent(in) :: P     ! air pressure (Pa)
+real(sp), intent(in) :: Tair  ! air temperature (degC)
+
+! parameters
+
+real(sp), parameter :: mustd = 8.87255592e-4  ! viscosity of water at SATP
+real(sp), parameter :: pstd  = 997.045532     ! density of water at SATP (kg m-3)
+
+! local variables
+
+real(sp) :: ki
+
+! ----
+
+ki = Ksat * mustd / (pstd * g)
+
+Ksat_env = ki * pwater(P,Tair) * g / muwater(P,Tair)
+
+end function Ksat_env
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine infiltration(srad,dmet,soilstate)
 
 ! infiltration following Sandoval et al. (2024) section 2.2.4
 
@@ -19,6 +55,7 @@ implicit none
 
 ! arguments
 
+real(sp),            intent(in)    :: srad       ! terrain slope (radians)
 type(metvars_daily), intent(in)    :: dmet
 type(soilstatetype), intent(inout) :: soilstate  ! state variables of the soil (top layer only)
 
@@ -40,6 +77,8 @@ real(sp) :: tp      ! ponding time (?)
 
 real(sp) :: r       ! total water flux at the surface (mm h-1)
 
+real(sp) :: cos2s   ! cos2(slope)
+
 ! ----
 
 rain = dmet%rain
@@ -50,12 +89,23 @@ theta = soilstate%theta
 
 ! ----
 
-r = rain / 6. + melt / 24.  ! following Sandoval set rain duration to 6 hr
-
-psi_f = (2. + 3. * lambda) / (1. + 3 * lambda) * psi_e / 2.
-
-tp = Ksat * psi_f * (Tsat - theta) / (r * (r - Ksat))
-
+! ki = Ksat0 * mustd / pstd
+! 
+! Ksat = ki * pg / muw()
+! 
+! cos2s = cos(srad)**2
+! 
+! r = (rain + melt) / 24.  ! convert to mm h-1
+! 
+! psi_f = (2. + 3. * lambda) / (1. + 3 * lambda) * psi_e / 2.
+! 
+! tp = Ksat * psi_f * (Tsat - theta) / (r * (r - Ksat))
+! 
+! rtd = 
+! 
+! if (r <= Ksat) then
+! 
+!   infil = r * 
 
 end subroutine infiltration
 
