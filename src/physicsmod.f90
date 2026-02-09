@@ -444,15 +444,45 @@ real(sp) :: tminK
 real(sp) :: tmaxK
 real(sp) :: EF
 real(sp) :: tdewK
+real(sp) :: poly
 
 ! ---
 
 tminK = tmin + tfreeze
 tmaxK = tmax + tfreeze
 
+! Guard against division by zero
+if (pann < 0.1_sp) then
+  dewpoint = tmin - 5.0_sp
+  return
+end if
+
 EF = dpet / pann
 
-tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
+! Cap EF to prevent overflow
+if (EF > 1.0_sp) EF = 1.0_sp
+if (EF < 0.0_sp) EF = 0.0_sp
+
+! Check for any invalid values
+if (EF /= EF .or. tminK /= tminK .or. tmaxK /= tmaxK .or. tminK <= 0.0_sp) then
+  dewpoint = tmin - 5.0_sp
+  return
+end if
+
+! Try to calculate, with simpler form
+poly = 1.003 - 1.444 * EF + 12.312 * EF * EF - 32.766 * EF * EF * EF
+
+! One more check on poly result
+if (poly /= poly .or. abs(poly) > 100.0_sp) then
+  dewpoint = tmin - 5.0_sp
+  return
+end if
+
+tdewK = tminK * (-0.127 + 1.121 * poly + 0.0006 * (tmaxK - tminK))
+
+dewpoint = tdewK - tfreeze
+
+! tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
 
 ! the equation above can result in an estimate for dewpoint temperature that is warmer than tmin, although it is unlikely
 ! to be warmer than the nighttime temperature

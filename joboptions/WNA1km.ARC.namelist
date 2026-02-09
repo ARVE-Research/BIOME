@@ -7,7 +7,7 @@
 
 ! sample run commands:
 
-! src/biome1 joboptions/WNA1km.ARC.namelist -900000/-100000/-1400000/-200000 output/california.nc
+! src/biome1 joboptions/WNA1km.ARC.namelist -895648/94513/-1384518/-287908 output/california.nc
 
 ! single point plots
 ! eureka, CA

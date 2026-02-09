@@ -111,9 +111,13 @@ real(sp) :: lwterm
 real(sp) :: hour_sw
 real(sp) :: hour_net
 
+real(sp) :: denom
+real(sp) :: denom2
+
 ! counters
 
 integer :: i
+
 
 ! ----------------------------------------------------------------------------------
 
@@ -165,7 +169,22 @@ call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,aet,direct,diffuse,sw_rad)
 
 ! Davis-Sandoval r_w term
 
-rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+! rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+
+! prevent divide by zero during polar night (hs=0)
+denom = ru * hs + rv * sin(hs)
+
+if (abs(denom) < epsilon(1.0_sp)) then
+  rw = 0.0_sp  ! No radiation during polar night
+else
+  rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
+end if
+
+! ! DEBUG - check for edge cases
+! if (abs(rv) < epsilon(1.0_sp) .or. abs(rw) < epsilon(1.0_sp)) then
+!   print *, 'EDGE CASE: rv=', rv, 'rw=', rw, 'hs=', hs
+!   print *, '  lat=', phi*180./pi, 'slope=', slope*180./pi, 'aspect=', aspect*180./pi
+! end if
 
 ! longwave flux - using Josey method
 
@@ -182,7 +201,14 @@ call surf_lw2(sunf,tnight,lw_night)  ! nighttime longwave radiation
 
 ! hour angle of net radiation crossover (shortwave = longwave) eqn 13
 
-lwterm = (lw_day - rw * ru) / (rw * rv)
+! lwterm = (lw_day - rw * ru) / (rw * rv)
+denom2 = rw * rv
+
+if (abs(denom2) < epsilon(1.0_sp)) then
+  lwterm = 0.0_sp
+else
+  lwterm = (lw_day - rw * ru) / denom2
+end if
 
 if (lwterm <= -1.) then
   hn = pi
@@ -695,10 +721,26 @@ implicit none
 real(sp), intent(in)  :: a
 real(sp), intent(in)  :: b
 real(sp), intent(in)  :: c
+real(sp) :: denom
 
 ! ----
 
-sinhs = (a * c + b * sqrt(b**2 + c**2 - a**2)) / (b**2 + c**2)
+denom = b**2 + c**2
+
+! Guard against division by zero
+if (abs(denom) < epsilon(1.0_sp)) then
+  sinhs = 0.0_sp
+  return
+end if
+
+! Guard against invalid sqrt (negative argument)
+if ((denom - a**2) < 0.0_sp) then
+  sinhs = 0.0_sp
+  return
+end if
+
+! calculation
+sinhs = (a * c + b * sqrt(denom - a**2)) / denom
 
 end function sinhs
 
