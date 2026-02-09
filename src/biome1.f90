@@ -505,7 +505,7 @@ do m = 1,nmos
       dmet1(i)%dayl  = solar%dayl
             
       ! calculate integrated day- and night-time temperature
-      ! nighttime is goes into the next day, need to know tmin of the next day
+      ! nighttime is goes into the next day (dmet1), need to know tmin of the next day
       ! in situations of polar day, day temperature covers 23 hrs
       ! in situations of polar night, day temperature covers 1 hr
 
@@ -513,7 +513,7 @@ do m = 1,nmos
       
       ! surface radiation budget and potential evapotranspiration
   
-      call radpet(pixel(i),dmet0(i))
+      call radpet(pixel(i),dmet0(i),dmet1(i))
       
       ! snow dynamics
 
@@ -634,7 +634,7 @@ do m = 1,nmos
 
       ! surface radiation budget and potential evapotranspiration
   
-      call radpet(pixel(i),dmet0(i))
+      call radpet(pixel(i),dmet0(i),dmet1(i))
       
       ! snow dynamics
             

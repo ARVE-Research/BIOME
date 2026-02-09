@@ -1,10 +1,6 @@
 module physicsmod
 
-use parametersmod, only : sp
-
 implicit none
-
-real(sp), parameter :: Tfreeze = 273.15
 
 public :: pw
 public :: lvap
@@ -93,7 +89,7 @@ real(sp) function lvap(Tair)  ! (kJ kg-1)
 ! Henderson-Sellers, B. (1984). A new formula for latent heat of vaporization of water as a function of temperature.
 ! Quarterly Journal of the Royal Meteorological Society, 110(466), 1186-1190. doi:10.1002/qj.49711046626
 
-use parametersmod, only : sp
+use parametersmod, only : sp,Tfreeze
 
 implicit none
 
@@ -152,7 +148,7 @@ real(sp) function esat(Tair)   ! (Pa)
 ! Ambaum, M. H. P. (2020). Accurate, simple equation for saturated vapour pressure over water and ice. 
 ! Quarterly Journal of the Royal Meteorological Society, 146(733), 4252-4258. doi:10.1002/qj.3899
 
-use parametersmod, only : sp
+use parametersmod, only : sp,Tfreeze
 
 implicit none
 
@@ -216,7 +212,7 @@ real(sp) function desdT(Tair)  ! (Pa K-1)
 ! comparison with other algorithms yields similar results
 ! JOK Jan 2025
 
-use parametersmod, only : sp
+use parametersmod, only : sp,Tfreeze
 
 implicit none
 
@@ -238,6 +234,104 @@ end function desdT
 
 ! ----------------------------------------------------------------------------------------------------------------
 
+real(sp) function pwater(P,Tair)   ! (kg m-3)
+
+! Function to calculate the density of water as a function of air temperature and pressure, based on:
+! Tanaka, M., Girard, G., Davis, R., Peuto, A., & Bignell, N. (2001). 
+! Recommended table for the density of water between 0 °C and 40 °C based on recent experimental reports. 
+! Metrologia, 38(4), 301-309. doi:10.1088/0026-1394/38/4/3
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: P     ! air pressure (Pa)
+real(sp), intent(in) :: Tair  ! air temperature (degC)
+
+! parameters
+! coefficients for density at SATP
+
+real(sp), parameter :: a1 =  -3.983035         ! degC-1
+real(sp), parameter :: a2 =    301.797         ! degC-1
+real(sp), parameter :: a3 = 522528.9           ! degC-1
+real(sp), parameter :: a4 =     69.34881       ! degC-1
+real(sp), parameter :: a5 =    999.974950      ! kg m-3
+
+! coefficients for the dissolved air correction
+
+real(sp), parameter :: s0 = -4.162 * 1.e-3     ! kg m-3
+real(sp), parameter :: s1 =  0.106 * 1.e-3     ! kg m-3 degC-1
+
+! coefficients for the pressure correction
+
+real(sp), parameter :: k0 = 50.74    * 1.e-11  ! Pa-1
+real(sp), parameter :: k1 = -0.326   * 1.e-11  ! Pa-1 C-1
+real(sp), parameter :: k2 =  0.00416 * 1.e-11  ! Pa-1 C-2
+
+! local variables
+
+real(sp) :: dairf   ! dissolved air correction factor
+real(sp) :: pfact   ! pressure correction factor
+
+! ----
+
+pfact = 1. + (k0 + k1 * tair + k2 * tair**2) * (P - 101325.)  ! pressure correction factor
+
+dairf = s0 + s1 * tair  ! dissolved air correction factor
+
+pwater = a5 * (1. - (tair + a1)**2 * (tair + a2) / (a3 * (tair + a4))) * pfact + dairf
+
+end function pwater
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function muw(P,Tair)   ! (Pa s)
+
+! Function to calculate the viscosity of water as this quantity is influenced by pressure and temperature, after:
+! Likhachev, E. R. (2003). Dependence of Water Viscosity on Temperature and Pressure. Technical Physics, 48(4), 514-515.
+! This expression for viscosity is simpler than the Sandoval function, and is acceptable because of the limited range 
+! of temperatures and pressures present at earth surface.
+
+use parametersmod, only : sp,Tfreeze
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: P     ! air pressure (Pa)
+real(sp), intent(in) :: Tair  ! air temperature (degC)
+
+! parameters
+real(sp), parameter :: R = 8.31446e-3      ! gas constant (kJ K-1 mol-1)
+real(sp), parameter :: E     =   4.753     ! kJ mol-1
+real(sp), parameter :: mu0   =   2.4055e-5 ! Pa s
+real(sp), parameter :: theta = 139.7       ! K
+real(sp), parameter :: a     =   4.42e-4   ! bar-1
+real(sp), parameter :: b     =   9.565e-4  ! kJ mol-1 bar-1
+real(sp), parameter :: c     =   1.24e-2   ! K bar-1
+
+! local variables
+
+real(sp) :: T     ! air temperature (K)
+real(sp) :: Pbar  ! air pressure (bar)
+
+! ----
+! unit conversions
+
+T = Tair + Tfreeze
+
+Pbar = P * 1.e-5
+
+! Likhachev eqn 2
+
+muw = mu0 * exp(a * Pbar + (E - b * Pbar) / (R * (T - theta - c * Pbar)))
+
+end function muw
+
+! ----------------------------------------------------------------------------------------------------------------
+
 real(sp) function Econ(P,Tair)  ! (m3 kJ-1)
 
 ! Function to calculate the energy-to-water conversion factor, based on:
@@ -253,12 +347,11 @@ real(sp) function Econ(P,Tair)  ! (m3 kJ-1)
 ! Yang, Y., & Roderick, M. L. (2019). Radiation, surface temperature and evaporation over wet surfaces. 
 ! Quarterly Journal of the Royal Meteorological Society, 145(720), 1118-1129. doi:10.1002/qj.3481
 
-
 use parametersmod, only : sp
 
 implicit none
 
-! argument
+! arguments
 
 real(sp), intent(in) :: P     ! air pressure (Pa)
 real(sp), intent(in) :: Tair  ! air temperature (degC)
@@ -361,6 +454,9 @@ EF = dpet / pann
 
 tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
 
+! the equation above can result in an estimate for dewpoint temperature that is warmer than tmin, although it is unlikely
+! to be warmer than the nighttime temperature
+
 dewpoint = tdewK - tfreeze
 
 end function dewpoint
@@ -431,6 +527,49 @@ Pvs = esat(Tair) / (Rw * Ta)
 abshum = Pvs * RH / 100. 
 
 end function abshum
+
+! ----------------------------------------------------------------------------------------------------------------
+
+real(sp) function dewfall(P,Tair,RH,HNneg)
+
+! Function to estimate dewfall (nighttime condensation)
+! Sandoval eqn 62b based on theory and measurements in:
+! Jones, H. G. (2013). Plants and Microclimate: A Quantitative Approach to Environmental Plant Physiology (3 ed.).
+! Cambridge: Cambridge University Press. (see particularly pgs 120-121)
+
+! Sandoval suggests that condensation is 10% of the energy-limited potential condensation
+! here we take the lesser of that value and the absolute humidity in the lowest 30m of the atmosphere
+
+use parametersmod, only : sp
+
+implicit none
+
+! arguments
+
+real(sp), intent(in) :: P     ! air pressure (Pa)
+real(sp), intent(in) :: Tair  ! air temperature (degC)
+real(sp), intent(in) :: RH    ! relative humidity (%)
+real(sp), intent(in) :: HNneg ! nighttime accumulated net radiation, negative up (J m-2 d-1)
+
+! local variables
+
+real(sp) :: Pv      ! absolute humidity (kg water vapor m-3)
+real(sp) :: pcon    ! potential condensation
+
+! ----
+! absolute humidity in the bottom 30m of the atmosphere (Jones, 2013)
+
+Pv = 30. * abshum(Tair,RH)  ! (kg m-3 = mm)
+
+! energy-limited potential condensation
+
+pcon = max(Econ(P,Tair) * (-HNneg),0.)
+
+! total condensation
+
+dewfall = min(pcon,Pv) ! (mm d-1)
+
+end function dewfall
 
 ! ----------------------------------------------------------------------------------------------------------------
 

@@ -37,6 +37,12 @@ real(sp), parameter :: pir_sp = pi_sp / 180.
 
 real(sp), parameter :: B0     = 0.17 ! background albedo
 
+! viscosity and density of water at SATP
+! IUPAC defines SATP (Standard Ambient Temperature and Pressure) as a 
+! temperature of 298.15 K (25.00 °C; 77.00 °F) 
+! and an absolute pressure of exactly 1 atm (101.325 kPa)
+
+
 ! --------------------------------------------------------------------------------------------------------
 ! calendar parameters
 

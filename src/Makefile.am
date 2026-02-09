@@ -21,6 +21,7 @@ biome1_SOURCES =       \
   diurnaltempmod.f90   \
   airmassmod.f90       \
   radiationmod.f90     \
+  soilphysicsmod.f90   \
   soilwatermod.f90     \
   snowmod.f90          \
   calcbiomemod.f90     \

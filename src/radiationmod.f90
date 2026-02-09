@@ -16,14 +16,14 @@ contains
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine radpet(pixel,dmet)
+subroutine radpet(pixel,dmet0,dmet1)
 
 ! shortwave and longwave radiation and dew point all depend on potential evapotranspiration (PET)
 ! we therefore pick an initial value for PET in this routine and iterate to a stable solution
 
 use parametersmod, only : sp,dp,pi => pi_sp,pir => pir_sp
 use typesmod,      only : orbitpars,airmasspars,pixeltype,solarpars,metvars_daily
-use physicsmod,    only : Econ,pet,dewpoint,rhum,abshum
+use physicsmod,    only : Econ,pet,dewpoint,rhum,abshum,dewfall
 use airmassmod,    only : airmass
 
 implicit none
@@ -32,7 +32,8 @@ implicit none
 
 type(pixeltype),     intent(in)    :: pixel
 ! type(solarpars),     intent(in)    :: solar
-type(metvars_daily), intent(inout) :: dmet    ! daily meteorological variables
+type(metvars_daily), intent(inout) :: dmet0    ! meteorological variables for the current day
+type(metvars_daily), intent(inout) :: dmet1    ! meteorological variables for the current night going into the next day
 
 ! parameter
 
@@ -116,19 +117,19 @@ integer :: i
 
 ! ----------------------------------------------------------------------------------
 
-toa_sw = dmet%rad0
-dayl   = dmet%dayl
-delta  = dmet%delta
+toa_sw = dmet0%rad0
+dayl   = dmet0%dayl
+delta  = dmet0%delta
 
-albedo = dmet%Bsw
+albedo = dmet0%Bsw
 
-tmin   = dmet%tmin
-tmax   = dmet%tmax
-tday   = dmet%tday
-tnight = dmet%tnight
-cldf   = dmet%cldf
-prec   = dmet%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
-aet    = dmet%aet
+tmin   = dmet1%tmin  ! the nighttime temperature is linked to the minumum temperature that represents the following day
+tmax   = dmet0%tmax
+tday   = dmet0%tday
+tnight = dmet0%tnight
+cldf   = dmet0%cldf
+prec   = dmet0%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
+aet    = dmet0%aet
 
 lat    = pixel%lat
 elv    = pixel%elv
@@ -205,21 +206,20 @@ call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
 
 ! dewpoint temperature and relative humidity
 
-tdew = dewpoint(tnight,tday,dpet,Pann)
+tdew = dewpoint(tmin,tmax,dpet,Pann)
 
 ! nighttime humidity
 
+if (tdew >= tnight) then 
+  write(0,*)'error in dewpoint',tmin,tnight,tdew
+  read(*,*)
+end if
+
 RH = rhum(tnight,tdew)
 
-! absolute humidity (Stull, 2017 eqn 4.14c)
+! dewfall
 
-Pv = abshum(tnight,RH)
-
-! condensation
-
-dcon = Econ(P,tnight) * HNneg  ! eqn 62 (mm d-1), however this should depend on the atmospheric water content
-
-write(0,'(6f7.1,f7.3)')tmin,tnight,tday,tmax,tdew,RH,Pv
+dcon = dewfall(P,tnight,RH,HNneg)
 
 ! ---------
 ! diagnostic output
@@ -255,20 +255,20 @@ hour_net = 24. * hn / (2. * pi)
 !   tdew = dewpoint(tmin,tmax,dpet,Pann)
 !   call surf_lw(tday,tdew,cldf,lw_rad)
 
-dmet%rdirect  = direct
-dmet%rdiffuse = diffuse
-dmet%dpet     = dpet
-dmet%HNpos    = HNpos
-dmet%HNneg    = HNneg
-dmet%sunf     = sunf
-dmet%hour_sw  = hour_sw
-dmet%hour_net = hour_net
-dmet%lwday    = lw_day
-dmet%lwnight  = lw_night
+dmet0%rdirect  = direct
+dmet0%rdiffuse = diffuse
+dmet0%dpet     = dpet
+dmet0%HNpos    = HNpos
+dmet0%HNneg    = HNneg
+dmet0%sunf     = sunf
+dmet0%hour_sw  = hour_sw
+dmet0%hour_net = hour_net
+dmet0%lwday    = lw_day
+dmet0%lwnight  = lw_night
 ! radiation outputs for diagnostics
-dmet%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
-dmet%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
-!dmet%lw_rad2 = lw_rad2   ! net longwave from surf_lw / Josey (W m-2) - for comparison
+dmet0%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
+dmet0%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
+!dmet0%lw_rad2 = lw_rad2   ! net longwave from surf_lw / Josey (W m-2) - for comparison
 
 
 ! night timestep
