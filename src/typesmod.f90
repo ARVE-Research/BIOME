@@ -64,6 +64,7 @@ type pixeltype
 
   real(sp) :: srad       ! slope inclination (rad)
   real(sp) :: gamma      ! slope orientation (rad), 0 = S, values increasing clockwise
+  real(sp) :: cos2s      ! cos2(srad) (fraction)
 
   ! meteorological variables
   real(sp) :: P      ! mean atmospheric pressure (Pa)
@@ -158,6 +159,7 @@ type soilstatetype
   real(sp) :: ki     ! intrinsic permeability (m2)
   real(sp) :: lambda ! pore size distribution (unitless)
   real(sp) :: psi_e  ! soil water potential at air entry (mm)
+  real(sp) :: psi_f  ! capillary head at the wetting front (mm)
   real(sp) :: w      ! instantaneous soil water content (mm cm-1)
   real(sp) :: theta  ! volumetric water content (fraction)
   real(sp) :: psi    ! soil matric potential (?)

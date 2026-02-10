@@ -56,7 +56,6 @@ real(sp), parameter :: td = 6.   ! precipitation duration (hr)
 ! local variables
 
 real(sp) :: P       ! atmospheric pressure (Pa)
-real(sp) :: srad    ! terrain slope (radians)
 
 real(sp) :: rain    ! liquid precipitation (mm d-1)
 real(sp) :: melt    ! snowmelt (mm d-1)
@@ -85,22 +84,23 @@ real(sp) :: dtheta
 
 ! ----
 
-P    = pixel%P
-srad = pixel%srad
+P     = pixel%P
+cos2s = pixel%cos2s
 
 Tair = (dmet%tmax + dmet%tmin) / 2.  ! estimate of 24-hr mean temperature
 rain = dmet%rain
 melt = dmet%melt
 
-ki    = soilstate%ki
-Tsat  = soilstate%Tsat
-theta = soilstate%theta
+ki     = soilstate%ki
+Tsat   = soilstate%Tsat
+theta  = soilstate%theta
 lambda = soilstate%lambda
-psi_e = soilstate%psi_e
+psi_e  = soilstate%psi_e
+psi_f  = soilstate%psi_f
 
 ! ----
 
-dtheta = 0.1
+dtheta = 0.7  ! for testing; should be removed
 
 r = (rain + melt) / td  ! convert daily total to mm h-1
 
@@ -110,21 +110,20 @@ if (r <= Ksat) then
 
   infil = r * td   ! eqn 31b
   
-  ! write(0,*)'infil a',rain,melt,r,Ksat,infil
+  write(0,*)'infil a',rain,melt,r,Ksat,infil
   
 else
 
-  cos2s = cos(srad)**2
-
-  psi_f = (2. + 3. * lambda) / (1. + 3. * lambda) * psi_e / 2.  ! eqn 29
+  ! NB in the equation below, psi_f needs to be positive in this equation; 
+  ! this is not shown in Sandoval. et al (2024) but present in the code SPLASH.cpp
   
-  tp = Ksat * psi_f * (dtheta) / (r * (r - Ksat))        ! eqn 30
+  tp = -psi_f * Ksat * dtheta / (r * (r - Ksat))  ! eqn 30. 
 
   tp1 = tp / cos2s
 
-  write(0,*)'infil b',rain,melt,r,Ksat,srad,cos2s,psi_e,psi_f,tp,tp1,r * tp1 / (psi_f * dtheta)
-
   infil = r * tp1 + Ksat * (td - tp1) - psi_f * dtheta * log(1. - r * tp1 / (psi_f * dtheta))
+
+  write(0,*)'infil b',rain,melt,r,Ksat,cos2s,cos2s,psi_e,psi_f,tp,tp1,infil
 
 end if
 

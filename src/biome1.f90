@@ -195,8 +195,6 @@ allocate(tmean(nmos))
 
 i = 1
 
-write(0,*)'FLAG',cntx,cnty,cntx*cnty
-
 do y = 1,cnty
   do x = 1,cntx
 
@@ -223,6 +221,7 @@ do y = 1,cnty
     
     pixel(i)%srad  = atan(pixel(i)%slope)        ! convert m m-1 to radians
     pixel(i)%gamma = aspectrad(pixel(i)%aspect)  ! sets south = 0 and converts to radians
+    pixel(i)%cos2s = cos(pixel(i)%srad)**2       ! used in infiltration routine and maybe elsewhere, but only needs to be calculated once
 
     ! annual temperature minima and maxima
     

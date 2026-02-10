@@ -78,8 +78,9 @@ real(sp) :: Tsat
 real(sp) :: T33
 real(sp) :: T1500
 
-real(sp) :: psi_e
 real(sp) :: lambda
+real(sp) :: psi_e
+real(sp) :: psi_f
 real(sp) :: Ksat
 real(sp) :: ki
 
@@ -119,6 +120,8 @@ do l = 1,nl
   call calcKsat(sand,clay,orgm,Db,Tsat,T33,T1500,lambda,Ksat,ki)
   
   psi_e = fPsi_e(sand,clay,orgm,T33,lambda)
+  
+  psi_f = (2. + 3. * lambda) / (1. + 3. * lambda) * psi_e / 2.  ! Sandoval et al. (2024) eqn 29, NB this value will be negative
 
   ! ---
 
@@ -131,7 +134,8 @@ do l = 1,nl
   soilstate(l)%ki     = ki
   soilstate(l)%lambda = lambda
   soilstate(l)%psi_e  = psi_e
-
+  soilstate(l)%psi_f  = psi_f
+  
 end do
 
 end subroutine soilproperties
@@ -457,7 +461,7 @@ real(sp), intent(in) :: lambda ! pore size distribution index (unitless)
 
 ! parameters
 
-real(sp), parameter :: kPa2mm = 1000. / g ! source https://en.wikipedia.org/wiki/Centimetre_or_millimetre_of_water
+real(sp), parameter :: kPa2mm = -1000. / g ! source https://en.wikipedia.org/wiki/Centimetre_or_millimetre_of_water
 real(sp), parameter :: ln33 = log(33.)
 
 ! local variables
@@ -493,7 +497,7 @@ if (psi_e < 0.) then
 
 end if
 
-fPsi_e = psi_e * kPa2mm
+fPsi_e = psi_e * kPa2mm  ! per Sandoval splash.point.R code the sign of psi_e is negative (mm)
 
 end function fPsi_e
 
