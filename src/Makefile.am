@@ -8,11 +8,11 @@ biome1_SOURCES =       \
   randomdistmod.f90    \
   typesmod.f90         \
   coordsmod.f90        \
+  physicsmod.f90       \
   pedotransfermod.f90  \
   readdatamod.f90      \
   tsoutputmod.f90      \
   netcdfoutputmod.f90  \
-  physicsmod.f90       \
   orbitmod.f90         \
   calendarmod.f90      \
   insolationmod.f90    \

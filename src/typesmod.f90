@@ -155,6 +155,7 @@ type soilstatetype
   real(sp) :: T1500  ! soil water content at wilting point (-1500 kPa) (mm cm-1)
   real(sp) :: whc    ! water holding capacity defined as T33 - T1500, reduced for coarse fragments (mm cm-1)
   real(sp) :: Ksat   ! saturated hydraulic conductivity (mm h-1)
+  real(sp) :: ki     ! intrinsic permeability (m2)
   real(sp) :: lambda ! pore size distribution (unitless)
   real(sp) :: psi_e  ! soil water potential at air entry (mm)
   real(sp) :: w      ! instantaneous soil water content (mm cm-1)

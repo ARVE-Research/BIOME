@@ -25,19 +25,17 @@ real(sp), parameter :: Tfreeze = 273.15 ! freezing temperature of freshwater (K)
 
 real(sp), parameter :: Rw = 461.5  ! gas constant for water vapor (J K-1 kg-1)
 
-real(sp), parameter :: pi_sp = 3.1415926
+real(sp), parameter :: pi_sp = 3.1415926_sp
 real(dp), parameter :: pi_dp = 3.14159265358979323846_dp
 
 real(dp), parameter :: pir_dp = pi_dp / 180._dp
-real(sp), parameter :: pir_sp = pi_sp / 180.
+real(sp), parameter :: pir_sp = pi_sp / 180._sp
 
 real(sp), parameter :: B0     = 0.17 ! background albedo
 
-real(sp), parameter :: g = 6.67430e-11  ! gravitational constant (m3 kg-1 s-2)
-
+real(sp), parameter :: g = 9.80665  ! mean gravitational acceleration (m s-2)
 
 integer, parameter :: npft = 13
-
 
 ! --------------------------------------------------------------------------------------------------------
 ! calendar parameters

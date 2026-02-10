@@ -81,6 +81,7 @@ real(sp) :: T1500
 real(sp) :: psi_e
 real(sp) :: lambda
 real(sp) :: Ksat
+real(sp) :: ki
 
 integer :: nl
 integer :: l
@@ -115,7 +116,7 @@ do l = 1,nl
 
   T1500 = fT1500(T33,clay) * svol
 
-  call calcKsat(sand,clay,orgm,Db,Tsat,T33,T1500,lambda,Ksat)
+  call calcKsat(sand,clay,orgm,Db,Tsat,T33,T1500,lambda,Ksat,ki)
   
   psi_e = fPsi_e(sand,clay,orgm,T33,lambda)
 
@@ -127,6 +128,7 @@ do l = 1,nl
   soilstate(l)%T1500  = T1500
   soilstate(l)%whc    = T33 - T1500
   soilstate(l)%Ksat   = Ksat
+  soilstate(l)%ki     = ki
   soilstate(l)%lambda = lambda
   soilstate(l)%psi_e  = psi_e
 
@@ -338,7 +340,7 @@ end function fT1500
 
 ! ----------------------------
 
-subroutine calcKsat(sand,clay,orgm,Db,Tsat,T33,T1500,lambda,Ksat)
+subroutine calcKsat(sand,clay,orgm,Db,Tsat,T33,T1500,lambda,Ksat,ki)
 
 ! function to estimate saturated hydraulic conductivity (Sandoval et al., 2024) (mm h-1)
 ! NB this equation comes from the code on github in the file splash.point.R, lines 351-363
@@ -359,6 +361,7 @@ real(sp), intent(in)  :: T33    ! water contentent at field capacity (fraction)
 real(sp), intent(in)  :: T1500  ! water content at wilting point (fraction)
 real(sp), intent(out) :: lambda ! pore size distribution index (unitless)
 real(sp), intent(out) :: Ksat   ! saturated hydraulic conductivity (mm h-1)
+real(sp), intent(out) :: ki     ! soil intrinsic permeability (m2)
 
 ! parameters
 
@@ -390,7 +393,38 @@ lambda = 1. / B
 
 Ksat = Ksmax / (1. + exp(k2 * sand + k3 * Db + k4 * clay + k5 * Tdrain + k6 * orgm + k7 * lambda))
 
+ki = fki(Ksat)
+
 end subroutine calcKsat
+
+! ----------------------------
+
+real(sp) function fki(Ksat) ! (m2)
+
+! Function to calculate the intrinsic permeability of soil, based on Sandoval et al. (2024) eqn 32
+! following Hillel (1998) eqn 7.15 and using 25C and 101325 Pa (SATP) as the boundary conditions
+! for water viscosity and density.
+
+use parametersmod, only : sp,g
+use physicsmod,    only : pwater,muwater
+
+implicit none
+
+! parameters
+
+real(sp), parameter :: P    = 101325.  ! (Pa)
+real(sp), parameter :: Tair =     25.  ! (C)
+
+! argument
+
+real(sp), intent(in) :: Ksat   ! (mm hr-1)
+
+! ----
+! NB the 3.6e6 factor converts Ksat (mm h-1) to Ksat (m s-2)
+
+fki = Ksat / 3.6e6 * muwater(P,Tair) / (pwater(P,Tair) * g)
+
+end function fki
 
 ! ----------------------------
 
@@ -409,6 +443,8 @@ real(sp) function fPsi_e(sand,clay,orgm,T33,lambda)
 ! but for this model, Sandoval sets the minimum air entry pressure equal to the Saxton and Rawls "A" value,
 ! which represents the air entry pressure at the intercept of the log-log retention curve.
 
+use parametersmod, only : sp,g
+
 implicit none
 
 ! arguments
@@ -421,7 +457,7 @@ real(sp), intent(in) :: lambda ! pore size distribution index (unitless)
 
 ! parameters
 
-real(sp), parameter :: kPa2mm = -1000. / 9.80665 ! source https://en.wikipedia.org/wiki/Centimetre_or_millimetre_of_water
+real(sp), parameter :: kPa2mm = 1000. / g ! source https://en.wikipedia.org/wiki/Centimetre_or_millimetre_of_water
 real(sp), parameter :: ln33 = log(33.)
 
 ! local variables

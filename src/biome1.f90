@@ -16,6 +16,7 @@ use radiationmod,    only : radpet
 use randomdistmod,   only : ran_seed
 use readdatamod
 use snowmod,         only : Tt,snow
+use soilphysicsmod,  only : infiltration
 use soilwatermod,    only : calcwhc,soilwater
 use tsoutputmod,     only : writedailymetvars
 use typesmod         ! going to use all of the types, but should specify
@@ -521,7 +522,7 @@ do m = 1,nmos
       
       ! water infiltration at the soil surface
       
-      ! call
+      ! call infiltration(pixel(i),dmet0(i),soilstate(i,1))
       
       ! soil water balance, including actual evapotranspiration and alpha
       
@@ -644,10 +645,12 @@ do m = 1,nmos
             
       call snow(pixel(i),dmet0(i))
 
+      ! water infiltration at the soil surface
+      
+      ! call infiltration(pixel(i),dmet0(i),soilstate(i,1))
+
       ! soil water balance, including actual evapotranspiration and alpha
       
-      call soilwater(dmet0(i),soilw(i))
-
       call soilwater(dmet0(i),soilw(i))
 
       ! daily output to text file, if running a single pixel
