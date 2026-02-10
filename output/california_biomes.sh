@@ -48,7 +48,7 @@ gmt psbasemap $boundsp -Jx$scale -B0 -P -K > $output
 
 gmt grdimage -R -J $infile?biome -C$cpt -nn -O -P -K >> $output
 
-gmt psbasemap $boundsu+ue -Ja-100/50/$scale -B0 -O -P -K >> $output
+gmt psbasemap $boundsu+ue -Ja-115/45/$scale -B0 -O -P -K >> $output
 
 gmt psxy $ocean -R -J -Gslategray1 -O -P -K >> $output
 

@@ -96,10 +96,10 @@ if (tcm >= 15.5) then
 end if
 
 ! plant type: 3) warm-temperate evergreen
-! 0.65-->.33
+! 0.65-->.33-->.5
 ! Include climates with very wet winters and dry summers
 if (tcm >= 5) then
-   if (alpha >= 0.33 .and. acm >= 0.6) then
+   if (alpha >= 0.5) then
 !   if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
     planttype(3) = .true.
   end if
@@ -108,20 +108,20 @@ end if
 !Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
 
 ! plant type: 4) temperate summergreen
-! 0.65-->.33-->.25
+! 0.65-->.33-->.25-->.33
 if (tcm >= -15 .and. tcm <=15.5) then
   if (GDD >= 1200) then
-  if (alpha >= 0.25) then
+  if (alpha >= 0.33) then
     planttype(4) = .true.
   end if
   end if
 end if
 
 ! plant type: 5) cool-temp conifer
-! 0.65-->.33-->.25
+! 0.65-->.33-->.25-->.33
 if (tcm >= -19 .and. tcm <= 5) then
   if (GDD >= 900) then
-  if (alpha >= 0.25) then
+  if (alpha >= 0.33) then
     planttype(5) = .true.
   end if
   end if

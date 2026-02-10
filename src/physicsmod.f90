@@ -487,8 +487,6 @@ dewpoint = tdewK - tfreeze
 ! the equation above can result in an estimate for dewpoint temperature that is warmer than tmin, although it is unlikely
 ! to be warmer than the nighttime temperature
 
-dewpoint = tdewK - tfreeze
-
 end function dewpoint
 
 ! ----------------------------------------------------------------------------------------------------------------
