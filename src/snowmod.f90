@@ -149,7 +149,7 @@ end if
 end subroutine snow
 
 ! ---------------------------------------
-! UNDER CONSTRUCTION ---- NEW SUBROUTINE FOR SNOW COVER FRACTION
+! Snow Cover Fraction
 subroutine calc_snow_cover_fraction(pixel, dmet)
 
 ! Calculate snow cover fraction during melt using Swenson & Lawrence (2012) eq. 4
@@ -163,17 +163,38 @@ type(pixeltype),     intent(in)    :: pixel
 type(metvars_daily), intent(inout) :: dmet
 
 real(sp) :: rel_swe     ! relative SWE (W/Wmax)
+real(sp) :: acos_arg    ! argument to acos
 
 ! ----
+
+! Check for NaN values
+if (isnan(dmet%swe) .or. isnan(dmet%swe_max) .or. isnan(pixel%Nmelt)) then
+  write(0,*) 'NaN detected! swe=', dmet%swe, ' swe_max=', dmet%swe_max, ' Nmelt=', pixel%Nmelt
+  stop
+end if
 
 if (dmet%swe_max > 0.) then
   rel_swe = dmet%swe / dmet%swe_max
   rel_swe = max(0., min(1., rel_swe))  ! constrain to [0,1]
   
-  ! Inverse cosine depletion curve (eq. 4)
-  dmet%fsnow = 1. - (1./pi * acos(2. * rel_swe - 1.))**pixel%Nmelt
+    ! Handle edge case: when rel_swe >= 0.9999, fsnow = 1 (avoid 0**Nmelt underflow)
+  if (rel_swe >= 0.9999) then
+    dmet%fsnow = 1.
+  else
+  	! Clamp acos argument to valid range to avoid floating-point issues
+  	acos_arg = 2. * rel_swe - 1.
+  	acos_arg = max(-1., min(1., acos_arg))
   
-  dmet%fsnow = max(0., min(1., dmet%fsnow))
+  	! Debug output
+ 	! write(0,*) 'DEBUG: swe=', dmet%swe, ' swe_max=', dmet%swe_max, ' rel_swe=', rel_swe
+    ! write(0,*) 'DEBUG: acos_arg=', acos_arg, ' Nmelt=', pixel%Nmelt
+
+    ! Inverse cosine depletion curve (eq. 4)
+    dmet%fsnow = 1. - (1./pi * acos(acos_arg))**pixel%Nmelt
+  
+    dmet%fsnow = max(0., min(1., dmet%fsnow))
+end if
+
 else
   dmet%fsnow = 0.
 end if

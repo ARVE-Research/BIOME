@@ -326,6 +326,9 @@ do i = 1,ncells
   call ran_seed(-104576,met_in(i)%rndst)
 end do
 
+! verify random number state
+! write(0,*) 'Random state after seeding:', met_in(1)%rndst
+
 ! initialize airmass parameters
 
 call initairmass()
@@ -407,7 +410,12 @@ do i = 1,ncells
 
   ! initialize precipitation; this is done one month at a time, returns daily precip amount for one month
   
-  call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(1)))
+  ! call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(1)))
+
+  call calcdprec(met_in(i),pixel(i)%dprec(1:ndm(1)))
+  
+  ! verify daily precip for one month 
+  ! write(0,*) 'Month 1 precip: input=', met_in(i)%prec, ' first 5 days=', pixel(i)%dprec(1:5)
   
   dmet0(i)%prec = pixel(i)%dprec(1)
 
@@ -448,7 +456,7 @@ do m = 1,nmos
       met_in(i)%prec = climate(x,y,m)%pre
       met_in(i)%wetf = climate(x,y,m)%wet
 
-      call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
+      call calcdprec(met_in(i),pixel(i)%dprec(1:ndm(m)))
       
     end do
   end if
@@ -584,7 +592,7 @@ do m = 1,nmos
     met_in(i)%prec = climate(x,y,m)%pre
     met_in(i)%wetf = climate(x,y,m)%wet
 
-    call calcdprec(met_in(i)%prec,met_in(i)%wetf,met_in(i)%pday,pixel(i)%dprec(1:ndm(m)))
+    call calcdprec(met_in(i),pixel(i)%dprec(1:ndm(m)))
     
   end do
 

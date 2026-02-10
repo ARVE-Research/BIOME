@@ -14,7 +14,6 @@ module weathergenmod
 ! 2020, Jed Kaplan, HKU, jed.kaplan@hku.hk
 
 use parametersmod, only : sp,hsp
-use randomdistmod, only : randomstate
 
 implicit none
 
@@ -208,7 +207,7 @@ contains
 
 ! ------------------------------------------------------------------------------------------------------------
 
-subroutine calcdprec(pre,wetf,pday,dprec)
+subroutine calcdprec(met_in,dprec)
 
 ! only simulate precipitation occurrence and amount so that this can be repeated to 
 ! arrive at a solution that meets the monthly total input precip constraint
@@ -216,24 +215,28 @@ subroutine calcdprec(pre,wetf,pday,dprec)
 ! loop across gridcells
 
 use parametersmod, only : sp,dp
-use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma
+use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma,randomstate
 use statsmod,      only : gamma_cdf,gamma_pdf
 use utilitymod,    only : roundto
+use typesmod,      only : metvars_in
 
 implicit none
 
 ! arguments
 
-real(sp),               intent(in)    :: pre    ! monthly total precipitation amount (mm)
-real(sp),               intent(in)    :: wetf   ! fraction of days in month with precipitation (fraction)
-logical,  dimension(2), intent(inout) :: pday   ! precipitation state for yesterday and the day before yesterday
-real(sp), dimension(:), intent(out)   :: dprec  ! daily precipitation amount
+type(metvars_in),       intent(inout)  :: met_in
+real(sp), dimension(:), intent(out) :: dprec  ! daily precipitation amount
 
 ! parameter
 
 integer, parameter :: maxiter = 100
 
 ! local variables
+
+real(sp)              :: pre    ! monthly total precipitation amount (mm)
+real(sp)              :: wetf   ! fraction of days in month with precipitation (fraction)
+logical,  dimension(2) :: pday   ! precipitation state for yesterday and the day before yesterday
+type(randomstate)      :: rndst  ! state of the random number generator
 
 integer :: i      ! counter
 integer :: d      ! day counter
@@ -244,8 +247,6 @@ integer :: npd    ! simulated number of days in month with precipitation (days)
 real(sp) :: pbar  ! mean amount of precipitation per wet day (mm)
 real(sp) :: pwet  ! probability that today will be wet
 real(sp) :: u     ! uniformly distributed random number (0-1)
-
-type(randomstate) :: rndst  ! integer state of the random number generator
 
 real(dp) :: cdf_thresh  ! gamma cdf at the threshold
 real(dp) :: pdf_thresh  ! gamma pdf at the threshold
@@ -260,11 +261,22 @@ integer  :: qc          ! difference between input and simulated number of days 
 
 logical,  allocatable, dimension(:) :: pdm  ! number of days in the month with precipitation
 
+logical, dimension(2) :: pday0
+
 real(sp) :: rescale  ! scale factor for precipitation amount
 
 ! -----------------------------------------------------------
 
+pre = met_in%prec
+wetf = met_in%wetf
+pday = met_in%pday
+rndst = met_in%rndst
+
 ndm = size(dprec)
+
+pday0 = pday
+
+!write(0,*)'RANDOM STATE',rndst
 
 ! -----------------------------------------------------------
 ! 1) Precipitation occurrence
@@ -295,6 +307,8 @@ wetd = max(nint(wetf * real(ndm)),1)
 i = 1
 
 do  ! quality control loop
+
+  pday = pday0
 
   ! for quality control purposes, we will set an acceptable threshold for days with precipitation
   ! of +/- 1 day around the input data, with a minimum of 1 day if there is any precip in the month.
@@ -345,7 +359,7 @@ do  ! quality control loop
 
   qc = abs(npd - wetd)
   
-  ! write(0,*)'iteration ',i,wetd,npd,qc
+  !write(0,*)'iteration ',i,wetd,npd,qc,pday
   
   if (npd > 0 .and. qc <= 1) exit  ! +/- 1 day > 0
   
@@ -427,6 +441,10 @@ rescale = pre / sum(dprec)
 
 dprec = roundto(dprec * rescale,1)
 
+! update the random state and pday for next call
+met_in%rndst = rndst
+met_in%pday = pday
+
 end subroutine calcdprec
 
 ! ------------------------------------------------------------------------------------------------------------
@@ -437,7 +455,7 @@ subroutine weathergen(met_in,met_out)
 ! (calcdprec subroutine above). In this routine, only temperature, cloudiness, and windspeed are calculated
 
 use parametersmod, only : sp,dp,tfreeze
-use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma
+use randomdistmod, only : ranur,ran_normal,ran_gamma_gp,ran_gamma,randomstate
 use statsmod,      only : gamma_cdf,gamma_pdf
 use utilitymod,    only : roundto
 use typesmod,      only : metvars_in,metvars_daily
