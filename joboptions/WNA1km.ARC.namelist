@@ -8,6 +8,7 @@
 ! sample run commands:
 
 ! src/biome1 joboptions/WNA1km.ARC.namelist -895648/94513/-1384518/-287908 output/california.nc
+! src/biome1 joboptions/WNA1km.ARC.namelist -895648/-54011/-1384518/-287908 output/california.nc
 
 ! single point plots
 ! eureka, CA
@@ -24,6 +25,12 @@
 
 ! san luis obispo, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -426021.46/-919172.98 output/singlepixel.nc
+
+# Big Sur / Lucia area
+! src/biome1 joboptions/WNA1km.ARC.namelist -580804.40/-983506.00 output/singlepixel.nc
+
+# San Luis Obispo area
+! src/biome1 joboptions/WNA1km.ARC.namelist -506285.89/-1060894.96 output/singlepixel.nc
 
 ! LA, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -303058.25/-1219461.43 output/singlepixel.nc

@@ -546,6 +546,7 @@ do m = 1,nmos
       dmet1(i)%asnow = dmet0(i)%asnow
       dmet1(i)%Bsw   = dmet0(i)%Bsw
       dmet1(i)%aet   = dmet0(i)%aet
+      dmet1(i)%tdew  = dmet0(i)%tdew
 
       dmet0(i) = dmet1(i)
 

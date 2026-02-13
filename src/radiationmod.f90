@@ -134,6 +134,12 @@ tnight = dmet0%tnight
 cldf   = dmet0%cldf
 prec   = dmet0%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
 aet    = dmet0%aet
+tdew   = dmet0%tdew
+
+! guard for first day when tdew may be uninitialized
+if (tdew < -100. .or. tdew > 50. .or. tdew /= tdew) then
+  tdew = tmin - 2.0
+end if
 
 lat    = pixel%lat
 elv    = pixel%elv
@@ -180,24 +186,21 @@ else
   rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
 end if
 
-! ! DEBUG - check for edge cases
-! if (abs(rv) < epsilon(1.0_sp) .or. abs(rw) < epsilon(1.0_sp)) then
-!   print *, 'EDGE CASE: rv=', rv, 'rw=', rw, 'hs=', hs
-!   print *, '  lat=', phi*180./pi, 'slope=', slope*180./pi, 'aspect=', aspect*180./pi
-! end if
+! longwave flux - using Josey method (uses previous day's dewpoint)
 
-! longwave flux - using Josey method
+call surf_lw(tday,tdew,cldf,lw_day)      ! daytime longwave radiation (Josey)
 
-!   tdew = dewpoint(tmin,tmax,dpet,Pann)
-!   call surf_lw(tday,tdew,cldf,lw_rad)
+call surf_lw(tnight,tdew,cldf,lw_night)  ! nighttime longwave radiation (Josey)
 
-! longwave flux -- Sandoval method
 
-sunf = sf(elv,toa_sw,sw_rad)         ! bright sunshine fraction as a function of elevation and sunlight attenuation Sandoval eqn 12
+! calculate sunf for diagnostic output
+sunf = sf(elv,toa_sw,sw_rad)
 
-call surf_lw2(sunf,tday,lw_day)      ! daytime longwave radiation
-
-call surf_lw2(sunf,tnight,lw_night)  ! nighttime longwave radiation
+! ! longwave flux -- Sandoval method (disabled)
+! 
+! call surf_lw2(sunf,tday,lw_day)      ! daytime longwave radiation
+! 
+! call surf_lw2(sunf,tnight,lw_night)  ! nighttime longwave radiation
 
 ! hour angle of net radiation crossover (shortwave = longwave) eqn 13
 
@@ -220,7 +223,7 @@ end if
 
 ! positive net radiation (daytime) eqn 14
 
-HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
+HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
 
 ! negative net radiation (nighttime) eqn 15
 
@@ -255,10 +258,7 @@ hour_net = 24. * hn / (2. * pi)
 
 ! write(0,'(2f7.1,3f7.3,4f7.1,2f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,hour_sw,hour_net,HNpos,HNneg
 
-
-
-! lw_rad = lw_day
-
+ lw_rad = lw_day
 
 ! Isw = sw_rad * (1. - albedo)
 
@@ -293,8 +293,10 @@ dmet0%lwday    = lw_day
 dmet0%lwnight  = lw_night
 ! radiation outputs for diagnostics
 dmet0%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
-dmet0%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
+!dmet0%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
 !dmet0%lw_rad2 = lw_rad2   ! net longwave from surf_lw / Josey (W m-2) - for comparison
+dmet0%lw_rad  = lw_day   ! net longwave using Josey method (W m-2)
+dmet0%tdew = tdew
 
 
 ! night timestep

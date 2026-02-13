@@ -99,7 +99,7 @@ end if
 ! 0.65-->.33-->.5
 ! Include climates with very wet winters and dry summers
 if (tcm >= 5) then
-   if (alpha >= 0.44 .and. twm <= 22) then
+   if (alpha >= 0.5 .or. (alpha >= 0.42 .and. twm <= 22)) then
 !   if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
     planttype(3) = .true.
   end if
