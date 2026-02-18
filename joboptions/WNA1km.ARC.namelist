@@ -26,10 +26,10 @@
 ! san luis obispo, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -426021.46/-919172.98 output/singlepixel.nc
 
-# Big Sur / Lucia area
+! Big Sur / Lucia area
 ! src/biome1 joboptions/WNA1km.ARC.namelist -580804.40/-983506.00 output/singlepixel.nc
 
-# San Luis Obispo area
+! San Luis Obispo area
 ! src/biome1 joboptions/WNA1km.ARC.namelist -506285.89/-1060894.96 output/singlepixel.nc
 
 ! LA, CA

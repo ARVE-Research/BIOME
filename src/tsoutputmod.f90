@@ -43,7 +43,9 @@ type(metvars_daily), intent(in) :: dmet
     dmet%hour_sw, &   ! 25 - hour angle of sunset (hours)
     dmet%hour_net, &   ! 26 - hour angle of net radiation crossover (hours)
     dmet%HNpos,  &   ! 27 - positive (daytime) net radiation (J m-2 d-1)
-    dmet%HNneg        ! 28 - negative (nighttime) net radiation (J m-2 d-1)
+    dmet%HNneg,  &   ! 28 - negative (nighttime) net radiation (J m-2 d-1)
+    dmet%tmin,   &   ! 29 - minimum temperature (C)
+    dmet%tmax        ! 30 - maximum temperature (C)
 
 end subroutine writedailymetvars
 

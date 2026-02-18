@@ -34,19 +34,32 @@ tmax=${bounds[3]}
 pmax=${bounds[7]}
 echo $t0/$t1/$tmin/$tmax
 
-# ---
 # GRAPH 1
 # temperature
-gmt psbasemap -R$t0/$t1/$tmin/$tmax -JX19/10 -Bpxa1O -Bpya10f2+l"Temperature (C)" -BWSn+t"Daily Min/Max Temperatures and Precipitation - ${place} (${lon}, ${lat})" -X4 -Y30 -P -K > $output
+gmt psbasemap -R$t0/$t1/$tmin/$tmax -JX19/10 -Bpxa1O -Bpya10f2+l"Temperature (C)" -BWSn+t"Day/Night Temperatures and Precipitation - ${place} (${lon}, ${lat})" -X4 -Y30 -P -K > $output
+# tmin
+awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$29}' $infile | gmt psxy -R -J -Wthin,darkblue -O -P -K >> $output
+# tmax
+awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$30}' $infile | gmt psxy -R -J -Wthin,darkred -O -P -K >> $output
 # night
 awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$4}' $infile | gmt psxy -R -J -Wthin,blue -O -P -K >> $output
 # day
-awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$3}' $infile | gmt psxy -R -J -Wthin,red -O -P -K >> $output 
+awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$3}' $infile | gmt psxy -R -J -Wthin,red -O -P -K >> $output
+# dewpoint
+awk '{printf "2021-%02i-%02iT %lg\n",$1,$2,$13}' $infile | gmt psxy -R -J -Wthin,green,- -O -P -K >> $output
+
+# legend
+gmt pslegend -R -J -DjTR+w3c+o0.2c -F+p1p+gwhite -O -P -K >> $output << EOF
+S 0.2c - 0.5c - thin,darkred 0.8c Tmax
+S 0.2c - 0.5c - thin,red 0.8c Tday
+S 0.2c - 0.5c - thin,blue 0.8c Tnight
+S 0.2c - 0.5c - thin,darkblue 0.8c Tmin
+S 0.2c - 0.5c - thin,green,- 0.8c Tdew
+EOF
 # ---
 # precipitation
 gmt psbasemap  -R$t0/$t1/0/$pmax -JX19/10 -Bpya+l"Precipitation (mm)" -BE -O -P -K >> $output
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$5}' $infile | gmt psxy -R -J -Sb0.02 -Wthin,dodgerblue -O -P -K >> $output
-
 # ---
 # GRAPH 2
 # snow water equivalent (mm) 

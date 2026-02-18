@@ -192,6 +192,7 @@ call surf_lw(tday,tdew,cldf,lw_day)      ! daytime longwave radiation (Josey)
 
 call surf_lw(tnight,tdew,cldf,lw_night)  ! nighttime longwave radiation (Josey)
 
+! write(0,*) 'DEBUG LW: lat=', lat, 'tday=', tday, 'tdew=', tdew, 'D=', tdew-tday, 'lw_day=', lw_day, 'sw_rad=', sw_rad
 
 ! calculate sunf for diagnostic output
 sunf = sf(elv,toa_sw,sw_rad)
@@ -236,6 +237,11 @@ call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
 ! dewpoint temperature and relative humidity
 
 tdew = dewpoint(tmin,tmax,dpet,Pann)
+
+dmet0%tdew = tdew   ! save for next day
+
+tdew = dewpoint(tmin,tmax,dpet,Pann)
+dmet0%tdew = tdew   ! save for next day
 
 ! nighttime humidity
 
