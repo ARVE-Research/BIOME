@@ -192,6 +192,9 @@ call surf_lw(tday,tdew,cldf,lw_day)      ! daytime longwave radiation (Josey)
 
 call surf_lw(tnight,tdew,cldf,lw_night)  ! nighttime longwave radiation (Josey)
 
+lw_day = -lw_day      ! convert to "negative down" convention for net radiation calc
+lw_night = -lw_night
+
 ! write(0,*) 'DEBUG LW: lat=', lat, 'tday=', tday, 'tdew=', tdew, 'D=', tdew-tday, 'lw_day=', lw_day, 'sw_rad=', sw_rad
 
 ! calculate sunf for diagnostic output
@@ -224,11 +227,13 @@ end if
 
 ! positive net radiation (daytime) eqn 14
 
-HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
+!HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
+HNpos = pisec * (lw_day * hn)  ! TEST: LW only
 
 ! negative net radiation (nighttime) eqn 15
 
-HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
+!HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) + lw_night * (pi - hn))
+HNneg = pisec * (-lw_night * (pi - hn))  ! TEST: LW only
 
 ! potential evapotranspiration
 
@@ -238,9 +243,6 @@ call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
 
 tdew = dewpoint(tmin,tmax,dpet,Pann)
 
-dmet0%tdew = tdew   ! save for next day
-
-tdew = dewpoint(tmin,tmax,dpet,Pann)
 dmet0%tdew = tdew   ! save for next day
 
 ! nighttime humidity
