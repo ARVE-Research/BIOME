@@ -39,6 +39,11 @@ type(metvars_daily), intent(inout) :: dmet1    ! meteorological variables for th
 
 real(sp) :: pisec = 86400. / pi
 
+! *** LONGWAVE METHOD SWITCH ***
+! Set to .true. to use Brutsaert (1975) downwelling-only method
+! Set to .false. to use Josey (2003) net longwave method
+logical, parameter :: use_brutsaert = .true.
+
 ! local variables
 
 real(dp) :: lat     ! latitude (degrees)
@@ -186,14 +191,20 @@ else
   rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
 end if
 
-! longwave flux - using Josey method (uses previous day's dewpoint)
+! longwave flux - select method based on switch
 
-call surf_lw(tday,tdew,cldf,lw_day)      ! daytime longwave radiation (Josey)
-
-call surf_lw(tnight,tdew,cldf,lw_night)  ! nighttime longwave radiation (Josey)
-
-lw_day = -lw_day      ! convert to "negative down" convention for net radiation calc
-lw_night = -lw_night
+if (use_brutsaert) then
+  ! Brutsaert (1975) / Crawford & Duchon (1999) - net longwave
+  call surf_lw_brutsaert(tday,tdew,cldf,lw_day)
+  call surf_lw_brutsaert(tnight,tdew,cldf,lw_night)
+else
+  ! Josey (2003) - net longwave (Qup - Qdn)
+  call surf_lw(tday,tdew,cldf,lw_day)
+  call surf_lw(tnight,tdew,cldf,lw_night)
+  ! negate for energy input convention
+  lw_day = -lw_day
+  lw_night = -lw_night
+end if
 
 ! write(0,*) 'DEBUG LW: lat=', lat, 'tday=', tday, 'tdew=', tdew, 'D=', tdew-tday, 'lw_day=', lw_day, 'sw_rad=', sw_rad
 
@@ -226,14 +237,21 @@ else
 end if
 
 ! positive net radiation (daytime) eqn 14
+! With Brutsaert: lw_day is downwelling LW (energy input to surface)
+! This adds to SW to give total energy available for evaporation
 
-!HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
-HNpos = pisec * (lw_day * hn)  ! TEST: LW only
+HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
+
+if (HNpos < 0.) then
+  write(0,*) 'NEGATIVE HNpos:', HNpos, 'lw_day=', lw_day, 'SW=', rw*ru, rw*rv, 'hn=', hn
+end if
 
 ! negative net radiation (nighttime) eqn 15
+! With Brutsaert: lw_night is downwelling LW, but nighttime has net loss
+! For now, we keep the original formulation which subtracts lw_night
 
-!HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) + lw_night * (pi - hn))
-HNneg = pisec * (-lw_night * (pi - hn))  ! TEST: LW only
+HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night * (pi - hn))
+
 
 ! potential evapotranspiration
 
@@ -535,6 +553,71 @@ lw_rad = Qup - (1. - al) * Qdn  ! eqn 1
 
 end subroutine surf_lw
 
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine surf_lw_brutsaert(tair,tdew,cldf,lw_rad)
+
+! estimate NET longwave radiation flux (W m-2) based on
+! Brutsaert (1975) for downwelling, Stefan-Boltzmann for upwelling
+!
+! Downwelling: Brutsaert, W. (1975). On a derivable formula for long-wave radiation from clear skies.
+! Water Resources Research, 11, 742-744.
+! Extended to all-sky conditions using Crawford & Duchon (1999).
+!
+! Reference: Tian et al. (2023) Understanding variations in downwelling longwave radiation
+! using Brutsaert's equation. Earth Syst. Dynam., 14, 1363-1374.
+
+use parametersmod, only : sp,tfreeze
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: tair   ! 2m air temperature (degC)
+real(sp), intent(in)  :: tdew   ! mean daily dewpoint temperature (degC)
+real(sp), intent(in)  :: cldf   ! cloud cover fraction
+real(sp), intent(out) :: lw_rad ! NET longwave radiation (W m-2), positive = surface losing energy
+
+! parameters
+
+real(sp), parameter :: sb = 5.6704e-8  ! Stefan-Boltzmann constant (W m-2 K-4)
+real(sp), parameter :: e_sfc = 0.98    ! surface emissivity
+
+! local variables
+
+real(sp) :: Ta      ! air temperature (K)
+real(sp) :: ea      ! water vapor pressure (mbar)
+real(sp) :: eps_cs  ! clear-sky atmospheric emissivity
+real(sp) :: eps_atm ! all-sky atmospheric emissivity
+real(sp) :: LW_down ! downwelling longwave (W m-2)
+real(sp) :: LW_up   ! upwelling longwave (W m-2)
+
+! ----
+
+Ta = tair + tfreeze
+
+! calculate water vapor pressure from dewpoint (Monteith & Unsworth, 2008)
+! ea in mbar (same as hPa)
+ea = 6.1079 * exp(17.269 * tdew / (237.3 + tdew))
+
+! Brutsaert (1975) clear-sky emissivity, eqn 1 in Tian et al.
+eps_cs = 1.24 * (ea / Ta) ** (1./7.)
+
+! Crawford & Duchon (1999) all-sky emissivity, eqn 4 in Tian et al.
+! clouds treated as blackbody (emissivity = 1)
+eps_atm = cldf + (1. - cldf) * eps_cs
+
+! downwelling longwave radiation (Brutsaert), eqn 5 in Tian et al.
+LW_down = eps_atm * sb * Ta**4
+
+! upwelling longwave radiation (Stefan-Boltzmann)
+! assume surface temp = air temp
+LW_up = e_sfc * sb * Ta**4
+
+! net longwave (positive = energy INTO surface)
+lw_rad = LW_down - LW_up
+
+end subroutine surf_lw_brutsaert
 ! ----------------------------------------------------------------------------------------------------------------
 
 subroutine surf_lw2(sunf,Tair,lw_rad)
