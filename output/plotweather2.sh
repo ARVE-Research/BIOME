@@ -32,6 +32,13 @@ t1=${bounds[1]}
 tmin=${bounds[4]}
 tmax=${bounds[3]}
 pmax=${bounds[7]}
+
+# Get minimum dewpoint and use it if lower than tmin
+tdew_min=$(awk 'BEGIN{min=999} {if($13<min) min=$13} END{print int(min/5)*5 - 5}' $infile)
+if (( $(echo "$tdew_min < $tmin" | bc -l) )); then
+  tmin=$tdew_min
+fi
+
 echo $t0/$t1/$tmin/$tmax
 
 # GRAPH 1

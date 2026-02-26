@@ -406,6 +406,7 @@ real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm
 real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
 real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
 
+
 ! ----
 
 Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
@@ -445,6 +446,17 @@ real(sp) :: tmaxK
 real(sp) :: EF
 real(sp) :: tdewK
 real(sp) :: poly
+real(sp) :: max_tdew
+real(sp) :: es_tmin
+real(sp) :: e_min
+real(sp) :: min_dewpoint
+
+! parameters for minimum dewpoint calculation
+real(sp), parameter :: Rv = 461.0_sp       ! J/(kg·K)
+real(sp), parameter :: Lv = 2.5e6_sp       ! J/kg
+real(sp), parameter :: T0 = 273.15_sp      ! K
+real(sp), parameter :: e0 = 611.0_sp       ! Pa
+real(sp), parameter :: RH_min = 0.01_sp    ! 1% minimum RH
 
 ! ---
 
@@ -458,9 +470,12 @@ if (pann < 0.1_sp) then
 end if
 
 EF = dpet / pann
+if (EF >= 0.2_sp) then
+  EF = 0.2_sp
+end if
 
 ! Cap EF to prevent overflow
-if (EF > 1.0_sp) EF = 1.0_sp
+if (EF > 0.4_sp) EF = 0.4_sp
 if (EF < 0.0_sp) EF = 0.0_sp
 
 ! Check for any invalid values
@@ -469,10 +484,10 @@ if (EF /= EF .or. tminK /= tminK .or. tmaxK /= tmaxK .or. tminK <= 0.0_sp) then
   return
 end if
 
-! Try to calculate, with simpler form
+! calculate, with simpler form
 poly = 1.003 - 1.444 * EF + 12.312 * EF * EF - 32.766 * EF * EF * EF
 
-! One more check on poly result
+! check on poly result
 if (poly /= poly .or. abs(poly) > 100.0_sp) then
   dewpoint = tmin - 5.0_sp
   return
@@ -481,6 +496,25 @@ end if
 tdewK = tminK * (-0.127 + 1.121 * poly + 0.0006 * (tmaxK - tminK))
 
 dewpoint = tdewK - tfreeze
+
+! ----
+! Floor for minimum plausible dewpoint based on RH
+
+! Get saturation vapor pressure at tmin (Pa)
+es_tmin = esat(tmin)
+
+! Minimum vapor pressure at 1% RH
+e_min = 0.05_sp * es_tmin
+
+! Calculate minimum dewpoint from equation 4.15a (Stull 2017, Practical Meteorology Chapter 4)
+! Td = [1/T0 - (Rv/L) * ln(e/e0)]^(-1)
+min_dewpoint = 1.0_sp / (1.0_sp/T0 - (Rv/Lv) * log(e_min/e0)) - 273.15_sp
+
+! Apply floor
+if (dewpoint < min_dewpoint) then
+  dewpoint = min_dewpoint
+end if
+! ----
 
 ! tdewK = tminK * (-0.127 + 1.121 * (1.003 - 1.444 * EF + 12.312 * EF**2 - 32.766 * EF**3) + 0.0006 * (tmaxK - tminK))  ! eqn 4
 

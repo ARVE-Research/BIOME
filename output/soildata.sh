@@ -58,7 +58,7 @@ awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$15}' $infile | gmt psxy -R -
 # GRAPH 2: Actual Evapotranspiration (mm)
 # ---
 
-gmt psbasemap -R$t0/$t1/0/$pet_max -JX19/7 -Bpxa1O -Bpya+l"AET (mm)" -BWSen+t"Actual Evapotranspiration" -Y-10 -P -O -K >> $output
+gmt psbasemap -R$t0/$t1/0/$pet_max -JX19/7 -Bpxa1O -Bpya+l"mm" -BWSen+t"Actual (blue) and Potential (pink) Evapotranspiration" -Y-10 -P -O -K >> $output
 
 # AET bars (column 14)
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$14}' $infile | gmt psxy -R -J -Sb0.02 -Ggold2@30 -Wthin,lightblue -O -P -K >> $output
