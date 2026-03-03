@@ -470,8 +470,8 @@ if (pann < 0.1_sp) then
 end if
 
 EF = dpet / pann
-if (EF >= 0.2_sp) then
-  EF = 0.2_sp
+if (EF >= 0.22_sp) then
+  EF = 0.22_sp
 end if
 
 ! Cap EF to prevent overflow

@@ -23,7 +23,7 @@
 ! carson pass, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -428047.90/-706770.64 output/singlepixel.nc
 
-! san luis obispo, CA
+! fresno, CA
 ! src/biome1 joboptions/WNA1km.ARC.namelist -426021.46/-919172.98 output/singlepixel.nc
 
 ! Big Sur / Lucia area

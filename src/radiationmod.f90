@@ -40,9 +40,11 @@ type(metvars_daily), intent(inout) :: dmet1    ! meteorological variables for th
 real(sp) :: pisec = 86400. / pi
 
 ! *** LONGWAVE METHOD SWITCH ***
-! Set to .true. to use Brutsaert (1975) downwelling-only method
-! Set to .false. to use Josey (2003) net longwave method
-logical, parameter :: use_brutsaert = .true.
+! Set to 1 for Brutsaert (1975) downwelling method
+! Set to 2 for Josey (2003) net longwave method
+! Set to 3 for Sandoval (2024) net longwave method
+! Set to 4 for net lw calculated with Brutsaert (1975) downwelling method and Josey (2003) upwelling method
+integer, parameter :: lw_method = 4
 
 ! local variables
 
@@ -196,26 +198,42 @@ else
   rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
 end if
 
-! longwave flux - select method based on switch
+! calculate sunf for diagnostic output (and for Sandoval LW method)
+sunf = sf(elv,toa_sw,sw_rad)
 
-if (use_brutsaert) then
+! longwave flux - select method based on switch
+select case (lw_method)
+
+case (1)  ! Brutsaert (1975) - downwelling only
   call surf_lw_brutsaert(tday,tdew,cldf,lw_day)
   call surf_lw_brutsaert(tnight,tdew,cldf,lw_night)
   ! Calculate net LW for crossover only
   lw_net_day = 0.98 * 5.6704e-8 * (tday + 273.15)**4 - lw_day
-else
-  ! Josey (2003) - net longwave (Qup - Qdn)
+
+case (2)  ! Josey (2003) - net longwave
   call surf_lw(tday,tdew,cldf,lw_day)
   call surf_lw(tnight,tdew,cldf,lw_night)
   ! negate for energy input convention
   lw_day = -lw_day
   lw_night = -lw_night
-end if
+  lw_net_day = -lw_day
+
+case (3)  ! Sandoval (2024) - net longwave
+  call surf_lw2(sunf,tday,lw_day)
+  call surf_lw2(sunf,tnight,lw_night)
+! Sandoval returns net loss; convert to net input
+  lw_day =  lw_day
+  lw_night = lw_night
+  lw_net_day = lw_day
+  
+case (4)  ! Hybrid: Brutsaert down + Josey up
+  call surf_lw_hybrid(tday,tdew,cldf,lw_day)
+  call surf_lw_hybrid(tnight,tdew,cldf,lw_night)
+  lw_net_day = lw_day
+
+end select
 
 ! write(0,*) 'DEBUG LW: lat=', lat, 'tday=', tday, 'tdew=', tdew, 'D=', tdew-tday, 'lw_day=', lw_day, 'sw_rad=', sw_rad
-
-! calculate sunf for diagnostic output
-sunf = sf(elv,toa_sw,sw_rad)
 
 ! hour angle of net radiation crossover (shortwave = longwave) eqn 13
 ! Use NET LW here (not downwelling) per Sandoval
@@ -234,17 +252,11 @@ else
   hn = acos(lwterm)
 end if
 
-! hn = hs  ! try setting hour angle for net radiation the same as SW. This should be removed!
-
 ! positive net radiation (daytime) eqn 14
 ! With Brutsaert: lw_day is downwelling LW (energy input to surface)
 ! This adds to SW to give total energy available for evaporation
 
-HNpos = pisec * ((rw * ru + lw_day) * hn + rw * rv * sin(hn))
-
-! if (HNpos < 0.) then
-!   write(0,*) 'NEGATIVE HNpos:', HNpos, 'lw_day=', lw_day, 'SW=', rw*ru, rw*rv, 'hn=', hn
-! end if
+HNpos = pisec * ((rw * ru - lw_day) * hn + rw * rv * sin(hn))
 
 ! negative net radiation (nighttime) eqn 15
 ! With Brutsaert: lw_night is downwelling LW, but nighttime has net loss
@@ -595,14 +607,19 @@ ea = esat(tdew) / 100.0_sp  ! esat returns Pa, convert to hPa/mbar
 
 ! Brutsaert (1975) clear-sky emissivity, eqn 1 in Tian et al. using K
 eps_cs = 1.24 * (ea / Ta) ** (1./7.)
+! consider using fixed value, check lit for sample values
 
 ! Crawford & Duchon (1999) all-sky emissivity, eqn 4 in Tian et al.
 ! clouds treated as blackbody (emissivity = 1)
-! eps_atm = 0.3*cldf + (1. - 0.3*cldf) * eps_cs
-eps_atm = eps_cs  ! EXPERIMENT: ignore clouds
+ eps_atm = cldf + (1. - cldf) * eps_cs
+! eps_atm = eps_cs  ! EXPERIMENT: ignore clouds
+
+! could fix atm emissivity to an average value
 
 ! downwelling longwave radiation (Brutsaert)
 lw_down = eps_atm * sb * Ta**4
+
+write(0,*) 'DEBUG EPS: tair=', tair, 'tdew=', tdew, 'ea=', ea, 'eps_cs=', eps_cs, 'eps_atm=', eps_atm, 'lw_down=', eps_atm * sb * Ta**4
 
 ! upwelling longwave radiation (Stefan-Boltzmann)
 !lw_up = e_sfc * sb * Ta**4
@@ -643,6 +660,61 @@ real(sp), parameter :: k4 =  0.088
 lw_rad = (k4 + (1. - k3) * sunf) * (k1 + k2 * Tair)
 
 end subroutine surf_lw2
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine surf_lw_hybrid(tair,tdew,cldf,lw_rad)
+
+! hybrid net longwave radiation flux (W m-2)
+! Downwelling: Brutsaert (1975) with Crawford & Duchon (1999) cloud correction
+! Upwelling: Stefan-Boltzmann (same as Josey)
+
+use parametersmod, only : sp,tfreeze
+use physicsmod,    only : esat
+
+implicit none
+
+! arguments
+
+real(sp), intent(in)  :: tair   ! 2m air temperature (degC)
+real(sp), intent(in)  :: tdew   ! mean daily dewpoint temperature (degC)
+real(sp), intent(in)  :: cldf   ! cloud cover fraction
+real(sp), intent(out) :: lw_rad ! net longwave (W m-2), positive = loss
+
+! parameters
+
+real(sp), parameter :: sb = 5.6704e-8  ! Stefan-Boltzmann constant (W m-2 K-4)
+real(sp), parameter :: e_sfc = 0.98    ! surface emissivity
+
+! local variables
+
+real(sp) :: Ta      ! air temperature (K)
+real(sp) :: ea      ! water vapor pressure (mbar)
+real(sp) :: eps_cs  ! clear-sky atmospheric emissivity
+real(sp) :: eps_atm ! all-sky atmospheric emissivity
+real(sp) :: lw_down ! downwelling longwave (W m-2)
+real(sp) :: lw_up   ! upwelling longwave (W m-2)
+
+! ----
+
+Ta = tair + tfreeze
+
+! Brutsaert downwelling
+ea = esat(tdew) / 100.0_sp  ! esat returns Pa, convert to hPa/mbar
+
+eps_cs = 1.24 * (ea / Ta) ** (1./7.)  ! Brutsaert (1975)
+
+eps_atm = cldf + (1. - cldf) * eps_cs  ! Crawford & Duchon (1999)
+
+lw_down = eps_atm * sb * Ta**4
+
+! Josey/Stefan-Boltzmann upwelling
+lw_up = e_sfc * sb * Ta**4
+
+! Net longwave (positive = surface losing energy)
+lw_rad = lw_up - lw_down
+
+end subroutine surf_lw_hybrid
 
 ! ----------------------------------------------------------------------------------------------------------------
 

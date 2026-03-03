@@ -327,6 +327,41 @@ if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
 if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
+! ----
+! monthly mean positive net radiation (daytime)
+
+ncstat = nf90_def_var(ofid,'HNpos',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','positive net radiation (daytime)')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','MJ m-2 d-1')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+! ----
+! monthly mean negative net radiation (nighttime)
+
+ncstat = nf90_def_var(ofid,'HNneg',nf90_float,[dimids(1),dimids(2),dimids(4)],varid,chunksizes=[chunks(1),chunks(2),chunks(4)],deflate_level=1,shuffle=.false.)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'long_name','negative net radiation (nighttime)')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'units','MJ m-2 d-1')
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'_FillValue',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
+
+ncstat = nf90_put_att(ofid,varid,'missing_value',rmissing)
+if (ncstat /= nf90_noerr) call netcdf_err(ncstat)
 
 ! ----
 ! monthly SWE

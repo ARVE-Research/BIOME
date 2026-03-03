@@ -60,12 +60,11 @@ place_clean=$(echo "$place" | tr ' ,' '_' | tr -d "'")
 echo "Plotting data for: ${place} (Lon: ${lon}, Lat: ${lat})"
 
 # get bounds for Graph 1: lwday (col 22), lwnight (col 24), swrad (col 18)
-bounds1=( $(awk '{printf "2021-%02i-%02iT12:00:00 %lg %lg %lg\n",$1,$2,$22,$24,$18}' $infile | gmt gmtinfo -I1/10 -C) )
-
+bounds1=( $(awk '{printf "2021-%02i-%02iT12:00:00 %lg %lg %lg %lg\n",$1,$2,-$22,-$24,$18,$18-$22}' $infile | gmt gmtinfo -I1/10 -C) )
 t0=${bounds1[0]}
 t1=${bounds1[1]}
 lw_min=$(echo "${bounds1[2]} ${bounds1[4]}" | awk '{print ($1 < $2) ? $1 : $2}')
-lw_max=$(echo "${bounds1[3]} ${bounds1[5]} ${bounds1[7]}" | awk '{m=$1; if($2>m)m=$2; if($3>m)m=$3; print m}')
+lw_max=$(echo "${bounds1[3]} ${bounds1[5]} ${bounds1[7]} ${bounds1[9]}" | awk '{m=$1; if($2>m)m=$2; if($3>m)m=$3; if($4>m)m=$4; print m}')
 
 # round lw_min down and lw_max up to nearest 50
 lw_min=$(echo "scale=0; ((${lw_min%.*}/50)-1)*50" | bc)
@@ -95,23 +94,25 @@ echo "HN range: $hn_min to $hn_max MJ m-2 d-1"
 # ---
 # GRAPH 1: Longwave (day/night) and Shortwave Radiation (W m-2)
 # ---
-
 gmt psbasemap -R$t0/$t1/$lw_min/$lw_max -JX19/7 -Bpxa1O -Bpya50f10+l"Radiation (W m@+-2@+)" -BWSen+t"Radiation Components - ${place} (${lon}, ${lat})" -X4 -Y26 -P -K > $output
-
 # swrad line (column 18) - orange
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$18}' $infile | gmt psxy -R -J -Wthick,orange -O -P -K >> $output
 
-# lwday line (column 22) - firebrick
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$22}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
+# lwday line (column 22) - firebrick, negative
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$22}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
 
-# lwnight line (column 24) - navy
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$24}' $infile | gmt psxy -R -J -Wthick,navy -O -P -K >> $output
+# lwnight line (column 24) - navy, negative
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$24}' $infile | gmt psxy -R -J -Wthick,navy -O -P -K >> $output
 
+# net rad line (sw - lw daytime) - green
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$18-$22}' $infile | gmt psxy -R -J -Wthick,green -O -P -K >> $output
 # legend
+
 gmt pslegend -R -J -DjTR+w5c+o0.2c -F+p0.5p+gwhite -O -P -K << EOF >> $output
 S 0.2c - 0.5c - thick,orange 0.6c SW downwelling
 S 0.2c - 0.5c - thick,firebrick 0.6c LW daytime
 S 0.2c - 0.5c - thick,navy 0.6c LW nighttime
+S 0.2c - 0.5c - thick,green 0.6c Net rad (SW-LW)
 EOF
 
 # ---
