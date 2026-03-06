@@ -86,6 +86,11 @@ real(sp) :: lw_down ! downwelling longwave (W m-2)
 real(sp) :: lw_up   ! upwelling longwave (W m-2)
 real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
+real(sp) :: lw_down_day    ! downwelling longwave daytime (W m-2)
+real(sp) :: lw_up_day      ! upwelling longwave daytime (W m-2)
+real(sp) :: lw_down_night  ! downwelling longwave nighttime (W m-2)
+real(sp) :: lw_up_night    ! upwelling longwave nighttime (W m-2)
+
 real(sp) :: RH      ! relative humidity (%)
 real(sp) :: Pv      ! absolute humidity (kg water vapor m-3)
 
@@ -97,6 +102,7 @@ real(sp) :: aet     ! actual evapotranspiration of the previous day (mm)
 
 real(sp) :: tmin
 real(sp) :: tmax
+real(sp) :: wind    ! wind speed at 10m height (m s-1)
 
 real(sp) :: phi     ! latitude (rad)
 real(sp) :: slope   ! slope (rad)
@@ -144,6 +150,7 @@ cldf   = dmet0%cldf
 prec   = dmet0%prec * dayl / 24. ! distribute 24-hr precipitation over the day and night (mm hr-1)
 aet    = dmet0%aet
 tdew   = dmet0%tdew
+wind   = dmet0%wind
 
 ! guard for first day when tdew may be uninitialized
 if (tdew < -100. .or. tdew > 50. .or. tdew /= tdew) then
@@ -163,10 +170,6 @@ Ratm = pixel%Ratm
 P    = pixel%P
 
 ! ----
-! hour angle when the solar radiation flux reaches the horizon or sunset hour (hs)
-
-slope  = 0.
-aspect = 0.
 
 call hourangle(delta,phi,slope,aspect,ru,rv,hs,sinhs)
 
@@ -198,6 +201,7 @@ else
   rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
 end if
 
+
 ! calculate sunf for diagnostic output (and for Sandoval LW method)
 sunf = sf(elv,toa_sw,sw_rad)
 
@@ -227,10 +231,13 @@ case (3)  ! Sandoval (2024) - net longwave
   lw_net_day = lw_day
   
 case (4)  ! Hybrid: Brutsaert down + Josey up
-  call surf_lw_hybrid(tday,tdew,cldf,lw_day)
-  call surf_lw_hybrid(tnight,tdew,cldf,lw_night)
+  call surf_lw_hybrid(tday,tdew,cldf,lw_down_day,lw_up_day,lw_day)
+  call surf_lw_hybrid(tnight,tdew,cldf,lw_down_night,lw_up_night,lw_night)
   lw_net_day = lw_day
-
+  ! save to output
+  dmet0%lw_down = lw_down_day
+  dmet0%lw_up = lw_up_day
+  
 end select
 
 ! write(0,*) 'DEBUG LW: lat=', lat, 'tday=', tday, 'tdew=', tdew, 'D=', tdew-tday, 'lw_day=', lw_day, 'sw_rad=', sw_rad
@@ -266,7 +273,7 @@ HNneg = pisec * (rw * rv * (sin(hs) - sin(hn)) + rw * ru * (hs - hn) - lw_night 
 
 ! potential evapotranspiration
 
-call pet(P,tday,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
+call pet(P,tday,tdew,wind,HNpos,lw_day,ru,rv,rw,dpet,dpmax)
 
 ! dewpoint temperature and relative humidity
 
@@ -287,30 +294,8 @@ dcon = dewfall(P,tnight,RH,HNneg)
 hour_sw  = 24. * hs / (2. * pi)
 hour_net = 24. * hn / (2. * pi)
 
-! write(0,'(2f7.1,3f7.3,4f7.1,2f7.3,2f12.1)')toa_sw,sw_rad,albedo,cldf,sunf,tday,lw_day,tnight,lw_night,hour_sw,hour_net,HNpos,HNneg
+lw_rad = lw_day
 
- lw_rad = lw_day
-
-! Isw = sw_rad * (1. - albedo)
-
-! netrad = Isw - lw_rad
-
-! call pet(P,tday,lw_rad,ru,rv,rw,hn,dpet)
-
-! write(0,'(f8.2,2f8.3,6f8.2)')toa_sw,cldf,sunf,direct,diffuse,sw_rad,lw_rad,dpet,aet
-
-! call surf_lw(tday,tdew,cldf,lw_rad)
-
-! call netrad_pet(sw_rad,lw_rad,albedo,P,tday,netrad,dpet)
-
-! write(0,*)i,hs,cldf,sunf,tday,rad0,direct,diffuse,sw_rad,lw_rad,Hnpos,Hnneg,dpet
-
-! write(0,*)i,Pann,tcm,cldf,tmin,tmax,tday,tdew,dpet,pet0,rhum(tday,tdew)
-
-
-! ! also calculate josey method for comparison output
-!   tdew = dewpoint(tmin,tmax,dpet,Pann)
-!   call surf_lw(tday,tdew,cldf,lw_rad)
 
 dmet0%rdirect  = direct
 dmet0%rdiffuse = diffuse
@@ -663,7 +648,7 @@ end subroutine surf_lw2
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine surf_lw_hybrid(tair,tdew,cldf,lw_rad)
+subroutine surf_lw_hybrid(tair,tdew,cldf,lw_down,lw_up,lw_rad)
 
 ! hybrid net longwave radiation flux (W m-2)
 ! Downwelling: Brutsaert (1975) with Crawford & Duchon (1999) cloud correction
@@ -679,7 +664,9 @@ implicit none
 real(sp), intent(in)  :: tair   ! 2m air temperature (degC)
 real(sp), intent(in)  :: tdew   ! mean daily dewpoint temperature (degC)
 real(sp), intent(in)  :: cldf   ! cloud cover fraction
-real(sp), intent(out) :: lw_rad ! net longwave (W m-2), positive = loss
+real(sp), intent(out) :: lw_down ! downwelling longwave (W m-2)
+real(sp), intent(out) :: lw_up   ! upwelling longwave (W m-2)
+real(sp), intent(out) :: lw_rad  ! net longwave (W m-2), positive = loss
 
 ! parameters
 
@@ -692,8 +679,6 @@ real(sp) :: Ta      ! air temperature (K)
 real(sp) :: ea      ! water vapor pressure (mbar)
 real(sp) :: eps_cs  ! clear-sky atmospheric emissivity
 real(sp) :: eps_atm ! all-sky atmospheric emissivity
-real(sp) :: lw_down ! downwelling longwave (W m-2)
-real(sp) :: lw_up   ! upwelling longwave (W m-2)
 
 ! ----
 

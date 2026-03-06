@@ -20,53 +20,24 @@ gmt gmtset MAP_TICK_LENGTH_SECONDARY 3p
 gmt gmtset MAP_ANNOT_OFFSET 2p
 gmt gmtset MAP_TICK_PEN $penwid,black
 
-ne=/work/kaplan_lab/datasets/naturalearth
+# use this for local machine
+ne=/Users/maycolgan/Desktop/Calgary/datasets
 
 ocean=$ne/ne_10m_ocean_blocks.gmt
 rivers=$ne/ne_10m_rivers_lake_centerlines.gmt
 lakes=$ne/ne_10m_lakes.gmt
 
-cpt=/work/kaplan_lab/projects/may/BIOME/output/biome17.cpt
+cpt=/Users/maycolgan/Desktop/Calgary/BIOME/output/biome17.cpt
 
-scale=1:4e6
+# use this for cluster
 
-infile=${1}
-
-tmp=${infile##*/}
-
-output=${tmp%%.*}_biomes.ps
-
-title="BIOME1 Output"
-
-#!/usr/bin/env bash
-
-# NB THIS SCRIPT WILL NOT RUN ON THE ARC HEAD NODE. SALLOC TO A COMPUTE NODE TO RUN
-
-# module load GMT
-
-penwid=thinner
-
-gmt gmtset GMT_VERBOSE normal
-gmt gmtset MAP_FRAME_TYPE plain
-gmt gmtset MAP_FRAME_PEN $penwid,black
-gmt gmtset PS_MEDIA a2
-gmt gmtset FONT_ANNOT_PRIMARY 8p,Helvetica,black
-gmt gmtset FONT_LABEL 8p,Helvetica,black
-gmt gmtset FONT_TITLE 9p,Helvetica,black
-gmt gmtset FORMAT_GEO_MAP ddd:mmG
-
-gmt gmtset MAP_TICK_LENGTH_PRIMARY 5p
-gmt gmtset MAP_TICK_LENGTH_SECONDARY 3p
-gmt gmtset MAP_ANNOT_OFFSET 2p
-gmt gmtset MAP_TICK_PEN $penwid,black
-
-ne=/work/kaplan_lab/datasets/naturalearth
-
-ocean=$ne/ne_10m_ocean_blocks.gmt
-rivers=$ne/ne_10m_rivers_lake_centerlines.gmt
-lakes=$ne/ne_10m_lakes.gmt
-
-cpt=/work/kaplan_lab/projects/may/BIOME/output/biome17.cpt
+# ne=/work/kaplan_lab/datasets/naturalearth
+# 
+# ocean=$ne/ne_10m_ocean_blocks.gmt
+# rivers=$ne/ne_10m_rivers_lake_centerlines.gmt
+# lakes=$ne/ne_10m_lakes.gmt
+# 
+# cpt=/work/kaplan_lab/projects/may/BIOME/output/biome17.cpt
 
 scale=1:4e6
 

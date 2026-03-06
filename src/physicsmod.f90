@@ -370,18 +370,72 @@ end function Econ
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
-
-! Estimation of daily total equilibrium evapotranspiration (dpet), mm
-! and hourly maximum evapotranspiration rate (mm h-1)
-! based on equations in Sandoval et al. and Davis et al. and source code
-
-! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
-! actual evapotranspiration. AET is instead calculated as a function of mean daytime shortwave and longwave fluxes,
-! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
-! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
-
+! subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
 ! 
+! ! Estimation of daily total equilibrium evapotranspiration (dpet), mm
+! ! and hourly maximum evapotranspiration rate (mm h-1)
+! ! based on equations in Sandoval et al. and Davis et al. and source code
+! 
+! ! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
+! ! actual evapotranspiration. AET is instead calculated as a function of mean daytime shortwave and longwave fluxes,
+! ! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
+! ! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
+! 
+! ! 
+! 
+! use parametersmod, only : sp
+! 
+! implicit none
+! 
+! ! arguments
+! 
+! real(sp), intent(in)  :: P       ! mean air pressure (Pa)
+! real(sp), intent(in)  :: Tair    ! air temperature (degC)
+! real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
+! 
+! real(sp), intent(in)  :: lw_rad  ! daily mean longwave radiation (W m-2)
+! real(sp), intent(in)  :: ru      ! simplification variables related to radiation
+! real(sp), intent(in)  :: rv      ! 
+! real(sp), intent(in)  :: rw      ! 
+! 
+! real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
+! real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
+! 
+! ! local variables
+! 
+! real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
+! real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
+! 
+! 
+! ! ----
+! 
+! Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
+! 
+! dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
+! 
+! rx = 3600. * Ec     ! m3 kJ-1 -> mm m2 W-1 h-1 [1000 (mm/m) / (1000 (J / kJ) / 3600 (s/h))]
+! 
+! dpmax = rx * ((rw * (ru + rv)) - lw_rad)  ! Sandoval eqn 53
+! 
+! end subroutine pet
+
+! ----------------------------------------------------------------------------------------------------------------
+
+subroutine pet(P,Tair,tdew,wind,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
+
+! Estimation of daily total potential evapotranspiration (dpet), mm
+! and hourly maximum evapotranspiration rate (mm h-1)
+!
+! dpet is calculated using the FAO-56 Penman-Monteith reference evapotranspiration equation:
+!   Allen, R. G., Pereira, L. S., Raes, D., & Smith, M. (1998).
+!   Crop evapotranspiration - Guidelines for computing crop water requirements.
+!   FAO Irrigation and Drainage Paper 56. FAO, Rome.
+!
+! This replaces the previous Priestley-Taylor / Sandoval (2024) energy-balance-only approach.
+! The FAO-56 formulation adds explicit vapor pressure deficit and wind speed terms, improving
+! PET estimates in arid and semi-arid regions where the aerodynamic demand is significant.
+!
+! dpmax retains the Sandoval (2024) formulation for downstream use in AET calculations
 
 use parametersmod, only : sp
 
@@ -390,31 +444,64 @@ implicit none
 ! arguments
 
 real(sp), intent(in)  :: P       ! mean air pressure (Pa)
-real(sp), intent(in)  :: Tair    ! air temperature (degC)
+real(sp), intent(in)  :: Tair    ! mean daytime air temperature (degC)
+real(sp), intent(in)  :: tdew    ! dewpoint temperature (degC)
+real(sp), intent(in)  :: wind    ! wind speed at 10m height (m s-1)
 real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
-
 real(sp), intent(in)  :: lw_rad  ! daily mean longwave radiation (W m-2)
 real(sp), intent(in)  :: ru      ! simplification variables related to radiation
-real(sp), intent(in)  :: rv      ! 
-real(sp), intent(in)  :: rw      ! 
+real(sp), intent(in)  :: rv      !
+real(sp), intent(in)  :: rw      !
 
 real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
 real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
 
 ! local variables
 
-real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
-real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
+real(sp) :: Ec    ! energy-to-water conversion factor (m3 kJ-1), used for dpmax
+real(sp) :: rx    ! simplification variable (mm m2 W-1 h-1)
 
+real(sp) :: ss    ! slope of saturation vapor pressure curve (kPa degC-1)
+real(sp) :: gam   ! psychrometric constant (kPa degC-1)
+real(sp) :: es    ! saturation vapor pressure at Tair (kPa)
+real(sp) :: ea    ! actual vapor pressure from dewpoint (kPa)
+real(sp) :: Rn    ! net radiation (MJ m-2 d-1)
+real(sp) :: u2    ! wind speed adjusted to 2m height (m s-1)
 
 ! ----
 
-Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
+! correct for wind speed height:
+!FAO-56 eqn 47: uses a reference surface of 2m, but input wind speed is 10m
+! u2 = uz * 4.87 / ln(67.8 * z - 5.42), z = 10m
+u2 = wind * 0.748  ! = 4.87 / ln(67.8*10 - 5.42)
 
-dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
+! slope of saturation vapor pressure curve (Pa K-1 -> kPa degC-1)
+ss = desdT(Tair) / 1000.
 
-rx = 3600. * Ec     ! m3 kJ-1 -> mm m2 W-1 h-1 [1000 (mm/m) / (1000 (J / kJ) / 3600 (s/h))]
+! psychrometric constant (Pa K-1 -> kPa degC-1)
+gam = psygamma(P, Tair) / 1000.
 
+! saturation vapor pressure at mean air temperature (Pa -> kPa)
+es = esat(Tair) / 1000.
+
+! actual vapor pressure from dewpoint temperature (Pa -> kPa)
+ea = esat(tdew) / 1000.
+
+! net radiation (J m-2 d-1 -> MJ m-2 d-1); G = 0 at daily timescale (FAO-56 eqn 42)
+Rn = HNpos / 1.e6
+
+! FAO-56 Penman-Monteith reference ET (eqn 6), mm d-1
+! numerator: energy term + aerodynamic term
+! denominator: psychrometric correction including surface resistance of reference grass (0.34 * u2)
+dpet = (0.408 * ss * Rn + gam * (900. / (Tair + 273.)) * u2 * (es - ea)) &
+       / (ss + gam * (1. + 0.34 * u2))
+
+! guard against negative PET
+dpet = max(dpet, 0.)
+
+! dpmax for use in AET calculations
+Ec    = Econ(P, Tair)
+rx    = 3600. * Ec
 dpmax = rx * ((rw * (ru + rv)) - lw_rad)  ! Sandoval eqn 53
 
 end subroutine pet
