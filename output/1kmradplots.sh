@@ -97,24 +97,23 @@ gmt psbasemap -R$t0/$t1/$lw_min/$lw_max -JX19/7 -Bpxa1O -Bpya50f10+l"Radiation (
 # swrad line (column 18) - orange
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$18}' $infile | gmt psxy -R -J -Wthick,orange -O -P -K >> $output
 # lwday line (column 22) - firebrick, negative
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$22}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
-# lwnight line (column 24) - navy, negative
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$24}' $infile | gmt psxy -R -J -Wthick,navy -O -P -K >> $output
+# awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$22}' $infile | gmt psxy -R -J -Wthick,firebrick -O -P -K >> $output
+# lwnight line (column 24) - purple, negative
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,-$24}' $infile | gmt psxy -R -J -Wthick,purple -O -P -K >> $output
 # net rad line (sw - lw daytime) - green
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$18-$22}' $infile | gmt psxy -R -J -Wthick,green -O -P -K >> $output
 # lw_down line (column 31) - darkblue
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$31}' $infile | gmt psxy -R -J -Wthick,darkblue -O -P -K >> $output
-# lw_up line (column 32) - lightblue
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$32}' $infile | gmt psxy -R -J -Wthick,lightblue -O -P -K >> $output
+# lw_up line (column 32) - deepskyblue
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$32}' $infile | gmt psxy -R -J -Wthick,deepskyblue -O -P -K >> $output
 # # legend
-# gmt pslegend -R -J -DjTR+w5c+o0.2c -F+p0.5p+gwhite -O -P -K << EOF >> $output
-# S 0.2c - 0.5c - thick,orange 0.6c SW downwelling
-# S 0.2c - 0.5c - thick,firebrick 0.6c LW daytime
-# S 0.2c - 0.5c - thick,navy 0.6c LW nighttime
-# S 0.2c - 0.5c - thick,green 0.6c Net rad (SW-LW)
-# S 0.2c - 0.5c - thick,darkblue 0.6c LW downwelling
-# S 0.2c - 0.5c - thick,lightblue 0.6c LW upwelling
-# EOF
+gmt pslegend -R -J -DjTL+w3.2c+o0.2c -F+p0.5p+gwhite -O -P -K << EOF >> $output
+S 0.2c - 0.5c - thick,orange 0.6c SW downwelling
+S 0.2c - 0.5c - thick,darkblue 0.6c LW downwelling
+S 0.2c - 0.5c - thick,deepskyblue 0.6c LW upwelling
+S 0.2c - 0.5c - thick,navy 0.6c Net LW
+S 0.2c - 0.5c - thick,green 0.6c Net rad (SW-LW)
+EOF
 
 # ---
 # GRAPH 2: Hour angles (sunset and net radiation crossover)
@@ -125,13 +124,13 @@ gmt psbasemap -R$t0/$t1/$hour_min/$hour_max -JX19/7 -Bpxa1O -Bpya2f1+l"Hours" -B
 # hour_sw line (column 25) - gold
 awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$25}' $infile | gmt psxy -R -J -Wthick,gold2 -O -P -K >> $output
 
-# hour_net line (column 26) - purple
-awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$26}' $infile | gmt psxy -R -J -Wthick,purple -O -P -K >> $output
+# hour_net line (column 26) - red
+awk '{printf "2021-%02i-%02iT06:00:00 %lg\n",$1,$2,$26}' $infile | gmt psxy -R -J -Wthick,firebrick1 -O -P -K >> $output
 
 # legend
 gmt pslegend -R -J -DjTR+w5c+o0.2c -F+p0.5p+gwhite -O -P -K << EOF >> $output
 S 0.2c - 0.5c - thick,gold2 0.6c Hour of sunset
-S 0.2c - 0.5c - thick,purple 0.6c Hour of net rad crossover
+S 0.2c - 0.5c - thick,firebrick1 0.6c Hour of net rad crossover
 EOF
 
 # ---
