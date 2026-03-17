@@ -4,7 +4,7 @@ implicit none
 
 contains
 
-! -----------------------------------------------------
+!---------------------------------------------------------------------------------------
 
 subroutine calcbiome(pixel)
 
@@ -16,39 +16,35 @@ implicit none
 ! This subroutine calculates the BIOME
 
 ! Choosing the plant types that are present
-! The planttype array has 13 positions which the following plant types occupying the following positions:
-!  1 Tropical Evergreen
-!  2 Tropical Raingreen
-!  3 Warm-Temperate Evergreen
-!  4 Temperate Summergreen
-!  5 Cool-Temperate Conifer
-!  6 Boreal Evergreen Conifer
-!  7 Boreal Summergreen
-!  8 Sclerophyll/succulent
-!  9 Warm grass/shrub
-! 10 Cool grass/shrub
-! 11 Cold grass/shrub
+! The planttype array has 12 positions which the following plant types occupying the following positions:
+!  1 Warm-Temperate Evergreen
+!  2 Coastal evergreen (fog-belt forest)
+!  3 Temperate Summergreen
+!  4 Cool-Temperate Conifer
+!  5 Boreal Evergreen Conifer
+!  6 Boreal Summergreen
+!  7 Sclerophyll/succulent (xerophytic, residual)
+!  8 Chaparral sclerophyll (warm-winter coastal)
+!  9 Valley savanna grass/oak (Central Valley)
+! 10 Warm grass/shrub
+! 11 Cool grass/shrub
 ! 12 Hot desert shrub
-! 13 Cold desert shrub
 
 ! --- list of biome number/names ---
-!  1 tropical rain forest
-!  2 tropical seasonal forest
-!  3 tropical dry forests/savanna
-!  4 warm mixed forest
-!  5 temperate deciduous forest
-!  6 cool mixed forest
-!  7 cool conifer forest
-!  8 cold evergreen forest
-!  9 cold mixed forest
-! 10 cold deciduous forest
-! 11 xerophytic woods and scrub
-! 12 warm grass/shrub
-! 13 cool grass/shrub
-! 14 tundra
-! 15 hot desert
-! 16 semidesert
-! 17 polar desert
+!  1 mixed oak and pine forest
+!  2 coastal forest
+!  3 yellow pine forest
+!  4 montane forest
+!  5 upper montane forest
+!  6 tundra
+!  7 pinyon-juniper woodland
+!  8 subalpine woodland
+!  9 arid scrub
+! 10 coastal scrub
+! 11 oak savanna
+! 12 sagebrush steppe
+! 13 desert steppe
+! 14 hot desert
 
 ! argument
 
@@ -66,9 +62,9 @@ real(sp) :: GDD0
 integer  :: biome
 integer  :: plantcase
 
-logical, dimension(13) :: planttype
+logical, dimension(12) :: planttype
 
-! ---------------------------------
+!---------------------------------------------------------------------------------------
 
 alpha = pixel%aalpha
 
@@ -83,231 +79,211 @@ GDD0 = pixel%gdd0
 
 planttype = .false.
 
+!---------------------------------------------------------------------------------------
 
-! plant types: 1) tropical evergreen, 2) tropical raingreen
-! EDIT: calc independently so both can be true simultaneously
-if (tcm >= 15.5) then
-  if (alpha >= 0.80) then
+! plant type: 1) warm-temperate evergreen
+!Prentice Alpha Value = 0.65
+! Include climates with very wet winters and dry summers
+if (tcm >= 5) then
+   if (alpha >= 0.45 .or. (alpha >= 0.4 .and. twm <= 22)) then
     planttype(1) = .true.
   end if
-  if (alpha >= 0.45 .and. alpha <= 0.95) then
+end if
+
+! plant type: 2) coastal evergreen (fog-belt forest)
+! Redwood, Douglas fir, tanoak — high year-round moisture with mild winters
+! Subset of warm-temperate evergreen climate space but wetter
+if (tcm > 8.0 .and. twm < 23.0) then
+  if (alpha > 0.55) then
     planttype(2) = .true.
   end if
 end if
 
-! plant type: 3) warm-temperate evergreen
-! 0.65-->.33-->.5
-! Include climates with very wet winters and dry summers
-if (tcm >= 5) then
-   if (alpha >= 0.45 .or. (alpha >= 0.4 .and. twm <= 22)) then
-!   if (alpha >= 0.33 .and. acm >= .98 .and. awm >= 0.008) then
-    planttype(3) = .true.
-  end if
-end if
-
-!Planttypes #4 and #5 I may want to lower their alpha values to 0.30, so that they can be true in pixel cells destined to have decidious forests. 
-
-! plant type: 4) temperate summergreen
-! 0.65-->.33-->.25-->.33
+! plant type: 3) temperate summergreen
+!Prentice Alpha Value = 0.65
 if (tcm >= -15 .and. tcm <=15.5) then
   if (GDD >= 1200) then
   if (alpha >= 0.33) then
+    planttype(3) = .true.
+  end if
+  end if
+end if
+
+! plant type: 4) cool-temp conifer
+!Prentice Alpha Value = 0.65
+if (tcm >= -19 .and. tcm <= 5) then
+  if (GDD >= 900) then
+  if (alpha >= 0.25) then
     planttype(4) = .true.
   end if
   end if
 end if
 
-! plant type: 5) cool-temp conifer
-! 0.65-->.33-->.25
-if (tcm >= -19 .and. tcm <= 5) then
-  if (GDD >= 900) then
-  if (alpha >= 0.25) then
-    planttype(5) = .true.
-  end if
-  end if
-end if
-
-! plant type: 6) boreal evergreen conifer
-! 0.75-->.38
+! plant type: 5) boreal evergreen conifer
+!Prentice Alpha Value = 0.75
 if (tcm >= -35 .and. tcm <= -2) then
   if (GDD >= 350) then
   if (alpha >= 0.38) then
-    planttype(6) = .true.
+    planttype(5) = .true.
   end if
   end if
 end if 
 
-! plant type: 7) boreal summergreen
-! 0.65-->.33-->.25
+! plant type: 6) boreal summergreen
+!Prentice Alpha Value = 0.65
 if (tcm <= 5) then 
   if (GDD >= 350) then
   if (alpha >= 0.25) then
-  planttype(7) = .true.
+  planttype(6) = .true.
   end if
   end if
 end if
 
-! plant type: 8) sclerophyll/succulent
-!0.28-->.14-->.09-->.15-->.12
+! plant type: 7) sclerophyll/succulent (xerophytic residual)
+!Prentice Alpha Value = 0.28
 if (tcm >= 5) then
   if (alpha >= 0.12) then
-  planttype(8) = .true.
+  planttype(7) = .true.
   end if
 end if
 
-! plant type: 9) warm grass/shrub
-! 0.18-->.06-->.09-->.11-->.09
+! plant type: 8) chaparral sclerophyll (warm-winter coastal)
+! New biome, not in Prentice paper
+! Warm winters (tcm > 12) separate from inland scrub; alpha > 0.20
+if (tcm > 12.0) then
+  if (alpha > 0.20) then
+    planttype(8) = .true.
+  end if
+end if
+
+! plant type: 9) valley savanna grass/oak (Central Valley)
+! New biome, not in Prentice paper
+! Moderate moisture (alpha 0.28-0.48) with cooler winters (tcm < 9)
+if (tcm < 11.0) then
+  if (alpha >= 0.28 .and. alpha <= 0.48) then
+    planttype(9) = .true.
+  end if
+end if
+
+! plant type: 10) warm grass/shrub
+!Prentice Alpha Value = 0.18
 if (twm >= 22) then
   if (alpha >= 0.09) then
-  planttype(9) = .true.
-  end if
-end if
-
-! plant type: 10) cool grass/shrub
-! 0.33-->.11-->.08
-if (GDD >= 500) then
-  if (alpha >= 0.08) then
   planttype(10) = .true.
   end if
 end if
 
-! plant type: 11) cold grass/shrub
-! 0.33-->.11-->.08
-if (GDD0 >= 100) then
+! plant type: 11) cool grass/shrub
+!Prentice Alpha Value = 0.33
+! Now also covers old cold grass/shrub and tundra pixels
+if (GDD >= 500 .or. GDD0 >= 100) then
   if (alpha >= 0.08) then
-  planttype(11) = .true. 
+  planttype(11) = .true.
   end if
 end if
 
 ! plant type: 12) hot desert shrub
-if (twm >= 22) then
+! Now also covers old cold desert shrub pixels
+if (twm >= 22 .or. GDD0 >= 100) then
   planttype(12) = .true.
 end if
 
-! plant type: 13) cold desert shrub
-if (GDD0 >= 100) then
-  planttype(13) = .true.
-end if
-
+!---------------------------------------------------------------------------------------
 ! BIOME Determining using present plant types. 
+!---------------------------------------------------------------------------------------
 
-! Here is my thinking. The select case only works using scalars. Since the planttype is an array here is what I will perform. 
-! I will set each .true./.false. combination of the planttype array equal to a integer value in the integer scalar "plantcase". Then I will perform a select case(plantcase).
+! dominance class 1; planttypes #2, #1
 
-! write(0,*)alpha,tcm,twm,GDD,GDD0
-! write(0,*)planttype
-! read(*,*)
-
-! dominance class 1
+! Coastal forest checked first — more specific, wetter type
+if (planttype(2)) then
+  pixel%biome = 2   ! coastal forest
+  return
+end if
 
 if (planttype(1)) then
-  if (.not. planttype(2)) then
-    pixel%biome = 1
+  pixel%biome = 1   ! mixed oak and pine forest
+  return
+end if 
+
+! dominance class 2; planttypes #3-#6
+
+if (planttype(3) .and. planttype(4) .and. planttype(6)) then 
+  if (.not. planttype(5)) then
+  pixel%biome = 3   ! yellow pine forest
   else
-    pixel%biome = 2
-  end if
-  return
-end if
-
-if (planttype(2) .and. .not. planttype(1)) then 
-  pixel%biome = 3
-  return
-end if
-
-! dominance class 2
-
-if (planttype(3)) then
-  pixel%biome = 4
-  return
-end if 
-
-! dominance class 3; planttypes #4-#7
-
-if (planttype(4) .and. planttype(5) .and. planttype(7)) then 
-  if (.not. planttype(6)) then
-  pixel%biome = 5
-  else
- pixel%biome = 6
+ pixel%biome = 4    ! montane forest
   end if
   return
 end if 
 
-if (planttype(5) .and. planttype(6) .and. planttype(7) .and. .not. planttype(4)) then 
-  pixel%biome = 7
+if (planttype(4) .and. planttype(5) .and. planttype(6) .and. .not. planttype(3)) then 
+  pixel%biome = 5   ! upper montane forest
   return
 end if
 
-if (planttype(6) .and. planttype(7) .and. .not. any(planttype(4:5))) then 
-  pixel%biome = 8
+if (planttype(5) .and. planttype(6) .and. .not. any(planttype(3:4))) then 
+  pixel%biome = 6   ! tundra
   return
 end if
 
-if (planttype(5) .and. planttype(7) .and. .not. planttype(4) .and. .not. planttype(6)) then
-  pixel%biome = 9
+if (planttype(4) .and. planttype(6) .and. .not. planttype(3) .and. .not. planttype(5)) then
+  pixel%biome = 7   ! pinyon-juniper woodland
   return
 end if 
 
-if (planttype(7) .and. .not. any(planttype(4:6))) then 
-  pixel%biome = 10
+if (planttype(6) .and. .not. any(planttype(3:5))) then 
+  pixel%biome = 8   ! subalpine woodland
   return
 end if
 
+! dominance class 3; planttypes #7, #8, #9
+! Check specific sclerophyll subtypes before falling back to generic arid scrub
 
-! I am swapping the order of dominance class #4 and #5 because biome 11 is being inferred in areas where biome #12 should be present. 
+if (planttype(8) .or. planttype(9) .or. planttype(7)) then
 
-! dominance class 4; planttype #8
-
-if (planttype(8)) then
-  pixel%biome = 11
-  return
-end if
-
- ! domiance class 5; planttype #9
-
-if (planttype(9)) then 
-  pixel%biome = 12
-  return
-end if
-
-! dominance class 6; planttypes #10 #11
-
-! if (planttype(11)) then
-!   if (.not. planttype(10)) then 
-!     pixel%biome = 14
-!   else 
-!     pixel%biome = 13
-!   end if
-!   return
-! end if
-
-! dominance class 6; planttypes #10 #11
-! EDIT handle cases where only cool grass/shrub is present
-
-if (planttype(10) .or. planttype(11)) then
-  if (planttype(11) .and. .not. planttype(10)) then 
-    pixel%biome = 14
-  else 
-    pixel%biome = 13
+  ! Coastal scrub dominates where warm-winter coastal sclerophyll is present
+  if (planttype(8)) then
+    pixel%biome = 10  ! coastal scrub
+    return
   end if
+
+  ! Valley savanna where moderate moisture + cool winters on valley floor
+  if (planttype(9)) then
+    pixel%biome = 11  ! oak savanna
+    return
+  end if
+
+  ! Residual arid scrub — dry interior
+  pixel%biome = 9    ! arid scrub
+  return
+
+end if
+
+ ! dominance class 4; planttype #10
+
+if (planttype(10)) then 
+  pixel%biome = 13   ! desert steppe
   return
 end if
 
-! dominance class 7; planttype #12
+! dominance class 5; planttype #11
+
+if (planttype(11)) then
+  pixel%biome = 12   ! sagebrush steppe
+  return
+end if
+
+! dominance class 6; planttype #12
 
 if (planttype(12)) then
-  pixel%biome = 15
+  pixel%biome = 14   ! hot desert
   return
 end if
 
-! dominance class 8; planttype #13
+! Fallback: hot desert when no plant types present
+pixel%biome = 14
 
-if (planttype(13)) then
-  pixel%biome = 16
-  return
-end if
-
-! Biome 17 for polar desert when no plant types present
-pixel%biome = 17
+!---------------------------------------------------------------------------------------
 
 end subroutine calcbiome
 

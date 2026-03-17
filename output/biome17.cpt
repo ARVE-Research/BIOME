@@ -1,20 +1,17 @@
-1   0/102/26      ;Tropical rain forest 
-2   77/128/26     ;Tropical seasonal forest
-3   153/102/26    ;Tropical dry forests/savanna
-4   0/26/128      ;Warm mixed forest
-5   0/200/0       ;Temperate deciduous forest
-6   204/255/204   ;Cool mixed forest
-7   0/153/51      ;Cool conifer forest
-8   26/26/230     ;Cold evergreen forest ! taiga
-9   128/51/77     ;Cold mixed forest
-10  51/204/255    ;Cold deciduous forest
-11  255/179/153   ;Xerophytic woods and scrub
-12  230/179/77    ;Warm grass/shrub
-13  255/229/127   ;Cool grass/shrub
-14  230/230/0     ;Tundra
-15  255/255/230   ;Hot desert
-16  255/217/179   ;Semidesert
-17  204/204/179   ;Polar desert
+1   115/166/64    ;Mixed oak and pine forest
+2   51/140/89     ;Coastal forest
+3   64/140/38     ;Yellow pine forest
+4   19/102/45     ;Montane forest
+5   0/64/32       ;Upper montane forest
+6   204/191/217   ;Tundra
+7   153/140/102   ;Pinyon-juniper woodland
+8   204/204/191   ;Subalpine woodland
+9   166/153/51    ;Arid scrub
+10  204/191/77    ;Coastal scrub
+11  230/217/102   ;Oak savanna
+12  217/166/102   ;Sagebrush steppe
+13  242/204/153   ;Desert steppe
+14  255/238/217   ;Hot desert
 B white
 F white
 N white

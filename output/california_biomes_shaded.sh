@@ -10,9 +10,9 @@ gmt gmtset GMT_VERBOSE normal
 gmt gmtset MAP_FRAME_TYPE plain
 gmt gmtset MAP_FRAME_PEN $penwid,black
 gmt gmtset PS_MEDIA a2
-gmt gmtset FONT_ANNOT_PRIMARY 8p,Helvetica,black
-gmt gmtset FONT_LABEL 8p,Helvetica,black
-gmt gmtset FONT_TITLE 9p,Helvetica,black
+gmt gmtset FONT_ANNOT_PRIMARY 10p,Helvetica,black
+gmt gmtset FONT_LABEL 10p,Helvetica,black
+gmt gmtset FONT_TITLE 10p,Helvetica,black
 gmt gmtset FORMAT_GEO_MAP ddd:mmG
 
 gmt gmtset MAP_TICK_LENGTH_PRIMARY 5p
@@ -29,6 +29,7 @@ lakes=$ne/ne_10m_lakes.gmt
 minorlakes=$ne/ne_10m_lakes_north_america.gmt
 states=$ne/ne_10m_admin_1_states_provinces_lines.gmt
 countries=$ne/ne_10m_admin_0_boundary_lines_land.gmt
+relief=/Users/maycolgan/Desktop/Calgary/BIOME/output/relief_ca_light.nc
 
 cpt=/Users/maycolgan/Desktop/Calgary/BIOME/output/biome17.cpt
 
@@ -42,6 +43,8 @@ cpt=/Users/maycolgan/Desktop/Calgary/BIOME/output/biome17.cpt
 # 
 # cpt=/work/kaplan_lab/projects/may/BIOME/output/biome17.cpt
 
+# ---------------------------
+
 scale=1:4e6
 
 infile=${1}
@@ -50,8 +53,6 @@ tmp=${infile##*/}
 
 output=${tmp%%.*}_biomes.ps
 
-title="BIOME1 Output"
-
 boundsp=$(gmt grdinfo -Ir $infile?biome)
 boundsu=$(gmt grdinfo -Io $infile?biome)
 
@@ -59,7 +60,7 @@ output=california_biomes.ps
 
 gmt psbasemap $boundsp -Jx$scale -B0 -P -K > $output
 
-gmt grdimage -R -J $infile?biome -C$cpt -nn -O -P -K >> $output
+gmt grdimage -R -J $infile?biome -C$cpt -I$relief -nn -O -P -K >> $output
 
 gmt psbasemap $boundsu+ue -Ja-115/45/$scale -B0 -O -P -K >> $output
 
@@ -79,8 +80,6 @@ gmt psxy $countries -R -J -W1p,black -O -P -K >> $output
 gmt psxy -R -J -Sa0.15i -Gyellow -Wthin,black -O -P -K << EOF >> $output
 -124.024247126 41.3654057278
 -119.909967252 38.5227851773
--118.2696034 33.9477746502
--121.4251 35.9358
 -122.002997515 39.6797625379
 -119.734905687 37.1122185252
 -116.836398522 36.2455129827
@@ -89,10 +88,8 @@ EOF
 
 gmt pstext -R -J -F+f11p,Helvetica-Bold,black+jLM -D0.1i/0 -O -P -K << EOF >> $output
 -116.836398522 36.2455129827 Badwater Basin
--121.4251 35.9358 Big Sur
 -119.909967252 38.5227851773 Carson Pass
 -124.024247126 41.3654057278 Redwood NP
--118.2696034 33.9477746502 Los Angeles
 -122.002997515 39.6797625379 US-RGo
 -119.734905687 37.1122185252 US-xSJ
 EOF
@@ -101,7 +98,7 @@ EOF
 gmt psbasemap -R -J -Ba2 -O -P -K >> $output
 
 # legend
-gmt gmtset FONT_ANNOT_PRIMARY 6p,Helvetica,black
+gmt gmtset FONT_ANNOT_PRIMARY 8p,Helvetica,black
 sed "s/TITLE/$title/g" biome17.legend | gmt pslegend -Dx0.2i/0.2i+jBL+l1.5+w2.5i -F+pthinnest,black+gwhite -O -P >> $output
 
 

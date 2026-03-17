@@ -57,6 +57,11 @@ type(soilstatetype),   allocatable, dimension(:,:)   :: soilstate   ! soil state
 
 real(sp), allocatable, dimension(:) :: tmean
 
+! threshold alpha parameters
+real(sp), parameter :: talpha_threshold = 10.0  ! minimum mean monthly temperature (degC) for growing season alpha avg
+real(sp) :: warm_alpha_sum
+integer  :: warm_count
+
 logical :: itsopen
 
 integer :: ncells
@@ -571,7 +576,6 @@ mmet%direct  = 0.
 mmet%diffuse = 0.
 mmet%swrad   = 0.
 mmet%lw_rad  = 0.
-!mmet%lw_rad2 = 0.
 mmet%swe  = 0.
 mmet%snow  = 0.
 mmet%melt  = 0.
@@ -671,8 +675,6 @@ do m = 1,nmos
       mmet(i,m)%diffuse = mmet(i,m)%diffuse + dmet0(i)%rdiffuse / real(ndm(m))
       mmet(i,m)%swrad   = mmet(i,m)%swrad   + dmet0(i)%swrad   / real(ndm(m))
       mmet(i,m)%lw_rad  = mmet(i,m)%lw_rad  + dmet0(i)%lw_rad  / real(ndm(m))
-      !mmet(i,m)%lw_rad2 = mmet(i,m)%lw_rad2 + dmet0(i)%lw_rad2 / real(ndm(m))
-
 
       mmet(i,m)%mpet  = mmet(i,m)%mpet  + dmet0(i)%dpet
       mmet(i,m)%alpha = mmet(i,m)%alpha + dmet0(i)%alpha / real(ndm(m))
@@ -681,7 +683,6 @@ do m = 1,nmos
       mmet(i,m)%melt = mmet(i,m)%melt + dmet0(i)%melt / real(ndm(m))
       mmet(i,m)%fsnow = mmet(i,m)%fsnow + dmet0(i)%fsnow / real(ndm(m))
       mmet(i,m)%Bsw = mmet(i,m)%Bsw + dmet0(i)%Bsw / real(ndm(m))
-
 
       pixel(i)%gdd5 = pixel(i)%gdd5 + max(dmet0(i)%tday - 5.,0.)
       pixel(i)%gdd0 = pixel(i)%gdd0 + max(dmet0(i)%tday,0.)
@@ -734,7 +735,6 @@ call writereal3d(ofid,gridinfo,pixel,'rdirect',mmet%direct)
 call writereal3d(ofid,gridinfo,pixel,'rdiffuse',mmet%diffuse)
 call writereal3d(ofid,gridinfo,pixel,'swrad',mmet%swrad)
 call writereal3d(ofid,gridinfo,pixel,'lw_rad',mmet%lw_rad)
-!call writereal3d(ofid,gridinfo,pixel,'lw_rad2',mmet%lw_rad2)
 
 call writereal3d(ofid,gridinfo,pixel,'mpet',mmet%mpet)
 call writereal3d(ofid,gridinfo,pixel,'alpha',mmet%alpha)
@@ -751,6 +751,7 @@ call writereal2d(ofid,gridinfo,pixel,'GDD5',pixel%gdd5)
 call writereal2d(ofid,gridinfo,pixel,'awm',pixel%awm)
 call writereal2d(ofid,gridinfo,pixel,'acm',pixel%acm)
 call writereal2d(ofid,gridinfo,pixel,'aalpha',pixel%aalpha)
+ 
 
 ! call writeterrain_real2d(ofid,gridinfo,'slope',pixel%slope)
 ! call writeterrain_real2d(ofid,gridinfo,'elev_stdev',pixel%elev_stdev)

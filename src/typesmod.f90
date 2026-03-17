@@ -50,7 +50,6 @@ type pixeltype
   real(dp) :: lon    ! longitude (deg)
   real(dp) :: lat    ! latitude (deg)
   real(sp) :: phi    ! latitude (rad)
-  ! integer, dimension(8) :: neighbors
 
   ! terrain characteristics (these have only one value per gridcell)
   real(sp) :: landf      ! part of gridcell that is ice-free land (fraction)
@@ -79,6 +78,7 @@ type pixeltype
   real(sp) :: awm    ! alpha of the warmest month (fraction)
   real(sp) :: acm    ! alpha of the coldest month (fraction)
   real(sp) :: aalpha ! mean annual alpha (fraction)
+  real(sp) :: talpha ! threshold alpha: warm-month only AET/PET (fraction)
   real(sp) :: Nmelt  ! depletion curve shape parameter
 
   real(sp), dimension(40) :: dprec
@@ -274,11 +274,9 @@ type metvars_daily  ! structure for weather generator output (daily)
   real(sp) :: swrad     ! downwelling shortwave radiation, daily mean (W m-2)
   real(sp) :: lwday     ! downwelling longwave radiation, daytime mean (W m-2)
   real(sp) :: lwnight   ! downwelling longwave radiation, nighttime mean (W m-2)
-  real(sp) :: lw_rad    ! net longwave from surf_lw2 / (Sandoval Method) (W m-2)
-  !real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey Method)(W m-2)
+  real(sp) :: lw_rad    ! net longwave radiation, hybrid Brutsaert/Stefan-Boltzmann (W m-2)
   real(sp) :: lw_down   ! downwelling longwave radiation (W m-2)
   real(sp) :: lw_up     ! upwelling longwave radiation (W m-2)
-  real(sp) :: lw_net    ! net longwave radiation (W m-2)
   real(sp) :: dpet      ! daytime potential evapotranspiration (mm d-1)
   
   real(sp) :: Bsw       ! shortwave albedo
@@ -329,10 +327,7 @@ type metvars_monthly
   real(sp) :: direct
   real(sp) :: diffuse
   real(sp) :: swrad     ! total surface downwelling shortwave (W m-2)
-  real(sp) :: lw_rad    ! net longwave from surf_lw2 / (Sandoval) (W m-2)
-  !real(sp) :: lw_rad2   ! net longwave from surf_lw / (Josey) (W m-2)
-  real(sp) :: lw_net   ! net longwave radiation (W m-2)
-
+  real(sp) :: lw_rad    ! net longwave radiation, hybrid Brutsaert/Stefan-Boltzmann (W m-2)
 
 end type metvars_monthly
 

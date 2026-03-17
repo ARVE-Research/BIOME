@@ -84,7 +84,6 @@ real(sp) :: lw_net_day ! net longwave for crossover calculation (W m-2)
 
 real(sp) :: lw_down ! downwelling longwave (W m-2)
 real(sp) :: lw_up   ! upwelling longwave (W m-2)
-real(sp) :: netrad  ! net radiation (kJ m-2 d-1)
 
 real(sp) :: lw_down_day    ! downwelling longwave daytime (W m-2)
 real(sp) :: lw_up_day      ! upwelling longwave daytime (W m-2)
@@ -113,7 +112,6 @@ real(sp) :: sinhs   ! sin of the hour angle of sunset
 real(sp) :: ru
 real(sp) :: rv
 real(sp) :: rw
-real(sp) :: sw
 
 ! real(sp) :: Ilw
 real(sp) :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
@@ -188,9 +186,7 @@ call airmass(lat,delta/pir,dayl,Ratm,air)
 
 call surf_sw(Pjj,Ratm,toa_sw,cldf,air,albedo,prec,tcm,aet,direct,diffuse,sw_rad)
 
-! Davis-Sandoval r_w term
-
-! rw = sw_rad * pi * (1. - albedo) / (ru * hs + rv * sin(hs))    ! Sandoval eqn. 8
+! Davis-Sandoval rw calculation, Sandoval eqn. 8
 
 ! prevent divide by zero during polar night (hs=0)
 denom = ru * hs + rv * sin(hs)
@@ -200,7 +196,6 @@ if (abs(denom) < epsilon(1.0_sp)) then
 else
   rw = sw_rad * pi * (1. - albedo) / denom    ! Sandoval eqn. 8
 end if
-
 
 ! calculate sunf for diagnostic output (and for Sandoval LW method)
 sunf = sf(elv,toa_sw,sw_rad)
@@ -291,28 +286,21 @@ dcon = dewfall(P,tnight,RH,HNneg)
 ! ---------
 ! diagnostic output
 
-hour_sw  = 24. * hs / (2. * pi)
-hour_net = 24. * hn / (2. * pi)
-
-lw_rad = lw_day
-
-
 dmet0%rdirect  = direct
 dmet0%rdiffuse = diffuse
 dmet0%dpet     = dpet
 dmet0%HNpos    = HNpos
 dmet0%HNneg    = HNneg
 dmet0%sunf     = sunf
-dmet0%hour_sw  = hour_sw
-dmet0%hour_net = hour_net
+dmet0%hour_sw  = 24. * hs / (2. * pi)
+dmet0%hour_net = 24. * hn / (2. * pi)
+dmet0%swrad    = sw_rad
 dmet0%lwday    = lw_day
 dmet0%lwnight  = lw_night
-! radiation outputs for diagnostics
-dmet0%swrad   = sw_rad   ! total surface downwelling shortwave (W m-2)
-!dmet0%lw_rad  = lw_rad    ! net longwave from surf_lw2 / Sandoval (W m-2) - USED IN PHYSICS
-!dmet0%lw_rad2 = lw_rad2   ! net longwave from surf_lw / Josey (W m-2) - for comparison
-dmet0%lw_rad  = lw_day   ! net longwave using Josey method (W m-2)
-dmet0%tdew = tdew
+dmet0%lw_down  = lw_down_day
+dmet0%lw_up    = lw_up_day
+dmet0%lw_rad   = lw_day    ! daytime net longwave, hybrid Brutsaert/SB (W m-2)
+dmet0%tdew     = tdew
 
 
 ! night timestep
@@ -403,10 +391,6 @@ diffuse = zeta * (tau**kp * rad0 - direct)  ! first part of eqn 2.5
 ! ----
 
 sw_rad = direct + diffuse
-
-! if (sw_rad > rad0) then
-!   write(0,*)cldf,albedo,rad0,sw_rad,direct,diffuse,zeta
-! end if
 
 end subroutine surf_sw
 
@@ -547,15 +531,12 @@ end subroutine surf_lw
 
 subroutine surf_lw_brutsaert(tair,tdew,cldf,lw_rad)
 
-! estimate NET longwave radiation flux (W m-2) based on
-! Brutsaert (1975) for downwelling, Stefan-Boltzmann for upwelling
+! Net longwave radiation using Brutsaert (1975) downwelling with 
+! Crawford & Duchon (1999) cloud correction and Stefan-Boltzmann upwelling.
 !
-! Downwelling: Brutsaert, W. (1975). On a derivable formula for long-wave radiation from clear skies.
-! Water Resources Research, 11, 742-744.
-! Extended to all-sky conditions using Crawford & Duchon (1999).
-!
-! Reference: Tian et al. (2023) Understanding variations in downwelling longwave radiation
-! using Brutsaert's equation. Earth Syst. Dynam., 14, 1363-1374.
+! Brutsaert, W. (1975). Water Resources Research, 11, 742-744.
+! Crawford, T. M., & Duchon, C. E. (1999). J. Appl. Meteor., 38, 474-480.
+! Tian et al. (2023). Earth Syst. Dynam., 14, 1363-1374.
 
 use parametersmod, only : sp,tfreeze
 use physicsmod, only : esat
@@ -592,26 +573,19 @@ ea = esat(tdew) / 100.0_sp  ! esat returns Pa, convert to hPa/mbar
 
 ! Brutsaert (1975) clear-sky emissivity, eqn 1 in Tian et al. using K
 eps_cs = 1.24 * (ea / Ta) ** (1./7.)
-! consider using fixed value, check lit for sample values
 
 ! Crawford & Duchon (1999) all-sky emissivity, eqn 4 in Tian et al.
 ! clouds treated as blackbody (emissivity = 1)
  eps_atm = cldf + (1. - cldf) * eps_cs
-! eps_atm = eps_cs  ! EXPERIMENT: ignore clouds
-
-! could fix atm emissivity to an average value
 
 ! downwelling longwave radiation (Brutsaert)
 lw_down = eps_atm * sb * Ta**4
 
-write(0,*) 'DEBUG EPS: tair=', tair, 'tdew=', tdew, 'ea=', ea, 'eps_cs=', eps_cs, 'eps_atm=', eps_atm, 'lw_down=', eps_atm * sb * Ta**4
-
 ! upwelling longwave radiation (Stefan-Boltzmann)
-!lw_up = e_sfc * sb * Ta**4
+lw_up = e_sfc * sb * Ta**4
 
 ! net longwave LOSS (positive = surface losing energy), matching Sandoval convention
-! lw_net = LW_up - LW_down
- lw_rad = lw_down
+lw_rad = lw_up - lw_down 
 
 end subroutine surf_lw_brutsaert
 ! ----------------------------------------------------------------------------------------------------------------
@@ -757,8 +731,6 @@ end if
 a = tau - tau0 * k5   ! numerator Sandoval et al. eqn 12
 
 b = tau0 * (1. - k5)  ! denominator Sandoval et al. eqn 12
-
-! write(0,*)tau0,tau,a,b,c
 
 ab = max(a / b,0.)
 

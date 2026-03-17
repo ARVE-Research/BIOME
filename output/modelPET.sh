@@ -34,13 +34,15 @@ ne=/Users/maycolgan/Desktop/Calgary/datasets
 ocean=$ne/ne_10m_ocean_blocks.gmt
 rivers=$ne/ne_10m_rivers_lake_centerlines.gmt
 lakes=$ne/ne_10m_lakes.gmt
+# minorlakes=$ne/ne_10m_lakes_north_america.gmt
 
 infile=${1:-california.nc}
 
 # --- make color palette (equal intervals, roma) ---
 # adjust -T range to suit your data: min/max/step
 
-gmt makecpt -Cturbo -T100/400/20 -Z > junepet.cpt
+# gmt makecpt -Cturbo -T100/400/20 -Z > junepet.cpt
+gmt makecpt -Cturbo -T100/400/20 -Z --COLOR_BACKGROUND=blue --COLOR_NAN=slategray1 > junepet.cpt
 
 # --- map setup ---
 
@@ -60,6 +62,7 @@ gmt psbasemap $boundsu+ue -Ja-115/45/$scale -B0 -O -P -K >> $output
 gmt psxy $ocean -R -J -Gslategray1 -O -P -K >> $output
 gmt psxy $rivers -R -J -Wthin,slategray1 -O -P -K >> $output
 gmt psxy $lakes -R -J -Gslategray1 -O -P -K >> $output
+# gmt psxy $minorlakes -R -J -Gslategray1 -O -P -K >> $output
 
 gmt psbasemap -R -J -Ba2 -O -P -K >> $output
 
@@ -69,7 +72,7 @@ gmt gmtset FONT_ANNOT_PRIMARY 12p,Helvetica,black
 gmt gmtset FONT_LABEL 13p,Helvetica,black
     
 gmt psscale -Cjunepet.cpt -Dx0.25i/0.6i+jBL+w4i/0.2i+h \
-    -Baf+l"Modeled June PET (mm/day)" \
+    -Baf+l"Modeled June PET -- FAO-56 Method (mm/day)" \
     -F+pthinnest,black+gwhite+c0.1i -O -P >> $output
 # --- convert to PDF ---
 

@@ -370,57 +370,6 @@ end function Econ
 
 ! ----------------------------------------------------------------------------------------------------------------
 
-! subroutine pet(P,Tair,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
-! 
-! ! Estimation of daily total equilibrium evapotranspiration (dpet), mm
-! ! and hourly maximum evapotranspiration rate (mm h-1)
-! ! based on equations in Sandoval et al. and Davis et al. and source code
-! 
-! ! Although Sandoval provides an equation for evaporative demand (Dp), it is not used directly in the calculation of  
-! ! actual evapotranspiration. AET is instead calculated as a function of mean daytime shortwave and longwave fluxes,
-! ! solar angle parameters, and evaporative supply rate (Sw). Sw is calculated in-turn as a function of the maximum 
-! ! hourly evaporative demand (DpMAX), which is a function of solar angle variables and mean daytime longwave.
-! 
-! ! 
-! 
-! use parametersmod, only : sp
-! 
-! implicit none
-! 
-! ! arguments
-! 
-! real(sp), intent(in)  :: P       ! mean air pressure (Pa)
-! real(sp), intent(in)  :: Tair    ! air temperature (degC)
-! real(sp), intent(in)  :: HNpos   ! daytime accumulated net radiation (J m-2 d-1)
-! 
-! real(sp), intent(in)  :: lw_rad  ! daily mean longwave radiation (W m-2)
-! real(sp), intent(in)  :: ru      ! simplification variables related to radiation
-! real(sp), intent(in)  :: rv      ! 
-! real(sp), intent(in)  :: rw      ! 
-! 
-! real(sp), intent(out) :: dpet    ! total daily potential evapotranspiration (mm d-1)
-! real(sp), intent(out) :: dpmax   ! maximum potential evapotranspiration rate (mm h-1)
-! 
-! ! local variables
-! 
-! real(sp) :: Ec   ! energy-to-water conversion factor (m3 kJ-1)
-! real(sp) :: rx   ! simplification variable (mm m2 W-1 h-1)
-! 
-! 
-! ! ----
-! 
-! Ec = Econ(P,Tair)   ! Sandoval eqn 51, see function  (m3 kJ-1)
-! 
-! dpet = Ec * HNpos   ! Sandoval eqn 50, but using HNpos so total per day, as per EVAP.cpp code (mm d-1)
-! 
-! rx = 3600. * Ec     ! m3 kJ-1 -> mm m2 W-1 h-1 [1000 (mm/m) / (1000 (J / kJ) / 3600 (s/h))]
-! 
-! dpmax = rx * ((rw * (ru + rv)) - lw_rad)  ! Sandoval eqn 53
-! 
-! end subroutine pet
-
-! ----------------------------------------------------------------------------------------------------------------
-
 subroutine pet(P,Tair,tdew,wind,HNpos,lw_rad,ru,rv,rw,dpet,dpmax)
 
 ! Estimation of daily total potential evapotranspiration (dpet), mm
